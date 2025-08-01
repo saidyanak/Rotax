@@ -2,67 +2,67 @@
 E-ticaret firmaları ve bağımsız sürücüleri bir araya getiren, yapay zeka destekli kargo dağıtım sistemi.
 # Kargo Uygulaması Mikro Servis Mimarisi
 
-cargo-microservices/
+cargo-microservices
 ├── README.md
 ├── docker-compose.yml
 ├── docker-compose.dev.yml
 ├── .gitignore
 ├── .env.example
-├── docs/
+├── docs
 │   ├── api-documentation.md
 │   ├── architecture.md
 │   └── setup-guide.md
-├── scripts/
+├── scripts
 │   ├── start-all.sh
 │   ├── stop-all.sh
 │   └── build-all.sh
-├── infrastructure/
-│   ├── nginx/
+├── infrastructure
+│   ├── nginx
 │   │   └── nginx.conf
-│   ├── kafka/
+│   ├── kafka
 │   │   └── kafka-setup.yml
-│   └── monitoring/
+│   └── monitoring
 │       ├── prometheus.yml
-│       └── grafana/
-├── services/
-│   ├── user-service/
-│   │   ├── src/
+│       └── grafana
+├── services
+│   ├── user-service
+│   │   ├── src
 │   │   ├── Dockerfile
 │   │   ├── pom.xml
 │   │   └── README.md
-│   ├── cargo-service/
-│   │   ├── src/
+│   ├── cargo-service
+│   │   ├── src
 │   │   ├── Dockerfile
 │   │   ├── pom.xml
 │   │   └── README.md
-│   ├── driver-service/
-│   │   ├── src/
+│   ├── driver-service
+│   │   ├── src
 │   │   ├── Dockerfile
 │   │   ├── pom.xml
 │   │   └── README.md
-│   ├── distributor-service/
-│   ├── matching-service/
-│   ├── location-service/
-│   ├── notification-service/
-│   ├── payment-service/
-│   ├── rating-service/
-│   ├── pickup-point-service/
-│   └── qr-code-service/
-├── shared/
-│   ├── common-models/
+│   ├── distributor-service
+│   ├── matching-service
+│   ├── location-service
+│   ├── notification-service
+│   ├── payment-service
+│   ├── rating-service
+│   ├── pickup-point-service
+│   └── qr-code-service
+├── shared
+│   ├── common-models
 │   │   └── src/main/java/com/cargo/models/
-│   ├── common-utils/
+│   ├── common-utils
 │   │   └── src/main/java/com/cargo/utils/
-│   └── common-configs/
+│   └── common-configs
 │       └── src/main/java/com/cargo/config/
-├── frontend/
-│   ├── mobile-app/
-│   ├── web-app/
-│   └── admin-panel/
-└── database/
-    ├── migrations/
-    ├── seeds/
-    └── schemas/
+├── frontend
+│   ├── mobile-app
+│   ├── web-app
+│   └── admin-panel
+└── database
+    ├── migrations
+    ├── seeds
+    └── schemas
 
 ## Ana Mikro Servisler
 
