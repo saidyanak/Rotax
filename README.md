@@ -2,6 +2,68 @@
 E-ticaret firmaları ve bağımsız sürücüleri bir araya getiren, yapay zeka destekli kargo dağıtım sistemi.
 # Kargo Uygulaması Mikro Servis Mimarisi
 
+cargo-microservices/
+├── README.md
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── .gitignore
+├── .env.example
+├── docs/
+│   ├── api-documentation.md
+│   ├── architecture.md
+│   └── setup-guide.md
+├── scripts/
+│   ├── start-all.sh
+│   ├── stop-all.sh
+│   └── build-all.sh
+├── infrastructure/
+│   ├── nginx/
+│   │   └── nginx.conf
+│   ├── kafka/
+│   │   └── kafka-setup.yml
+│   └── monitoring/
+│       ├── prometheus.yml
+│       └── grafana/
+├── services/
+│   ├── user-service/
+│   │   ├── src/
+│   │   ├── Dockerfile
+│   │   ├── pom.xml
+│   │   └── README.md
+│   ├── cargo-service/
+│   │   ├── src/
+│   │   ├── Dockerfile
+│   │   ├── pom.xml
+│   │   └── README.md
+│   ├── driver-service/
+│   │   ├── src/
+│   │   ├── Dockerfile
+│   │   ├── pom.xml
+│   │   └── README.md
+│   ├── distributor-service/
+│   ├── matching-service/
+│   ├── location-service/
+│   ├── notification-service/
+│   ├── payment-service/
+│   ├── rating-service/
+│   ├── pickup-point-service/
+│   └── qr-code-service/
+├── shared/
+│   ├── common-models/
+│   │   └── src/main/java/com/cargo/models/
+│   ├── common-utils/
+│   │   └── src/main/java/com/cargo/utils/
+│   └── common-configs/
+│       └── src/main/java/com/cargo/config/
+├── frontend/
+│   ├── mobile-app/
+│   ├── web-app/
+│   └── admin-panel/
+└── database/
+    ├── migrations/
+    ├── seeds/
+    └── schemas/
+
 ## Ana Mikro Servisler
 
 ### 1. **User Service** (Port: 8081)
@@ -266,15 +328,3 @@ Nginx kullanarak tüm isteklerin tek noktadan yönetilmesi:
 - API seviyesinde güvenlik kontrolleri
 - Veri şifreleme ve güvenli iletişim
 
-## Geliştirme Sırası Önerisi:
-
-1. **User Service** - Temel kimlik doğrulama altyapısı
-2. **Cargo Service** - İş mantığının temeli
-3. **Driver Service** - Sürücü operasyonları
-4. **Distributor Service** - Müşteri operasyonları
-5. **Matching Service** - Kritik eşleştirme algoritması
-6. **Location Service** - Gerçek zamanlı özellikler
-7. **Notification Service** - Kullanıcı deneyimi
-8. **Payment Service** - Ödeme entegrasyonu
-
-Her servis bağımsız olarak geliştirilebilir ve dağıtılabilir, bu da paralel geliştirme imkanı sağlar.
