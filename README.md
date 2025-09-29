@@ -1,269 +1,106 @@
-# Rotax
-E-ticaret firmaları ve bağımsız sürücüleri bir araya getiren, yapay zeka destekli kargo dağıtım sistemi.
-# Kargo Uygulaması Mikro Servis Mimarisi
+Rotax - Kapsamlı Teknik Mimari ve İş Akışları Detayları
+Bu doküman, projenin her bir parçasını derinlemesine inceleyerek tam bir teknik referans sunmaktadır.
 
+Bölüm 1: Sistem Mimarisi ve Felsefesi
+Proje, modern yazılım geliştirme prensipleriyle tasarlanmış bir mikroservis mimarisine sahiptir. Bu, sistemin farklı parçalarının bağımsız olarak geliştirilebilmesi, güncellenebilmesi ve ölçeklendirilebilmesi anlamına gelir.
 
-## Ana Mikro Servisler
+Spring Boot Ana Servisi (Sistemin Kalbi): Tüm kullanıcı etkileşimlerini, veri tutarlılığını ve temel iş kurallarını yöneten ana omurgadır. Güvenilir ve sağlam olması için Java/Spring Boot tercih edilmiştir.
 
-### 1. **User Service** (Port: 8081)
-**Ana Sorumluluk:** Tüm kullanıcı türleri için kimlik doğrulama ve profil yönetimi
+Python Eşleştirme Servisi (Sistemin Beyni): Yoğun hesaplama ve potansiyel yapay zeka/makine öğrenmesi gerektiren "en uygun sürücüyü bulma" görevine odaklanmış uzman bir servistir. Bu iş için en iyi araçları sunan Python ile geliştirilecektir.
 
-#### Temel Görevleri:
-- **Kimlik Doğrulama İşlemleri:**
-  - Kullanıcı kaydı (Driver, Distributor, Son Kullanıcı olarak)
-  - Giriş yapma ve çıkış yapma
-  - JWT token oluşturma ve doğrulama
-  - Şifre sıfırlama işlemleri
-  - Email doğrulama
+RabbitMQ (Sistemin Kan Damarları): Bu iki servis arasındaki iletişimi sağlayan asenkron mesajlaşma sistemidir. Bir servis diğerine doğrudan "bağımlı" değildir; bunun yerine, işlenecek görevleri (mesajları) bu ortak posta kutusuna bırakırlar. Bu, sistemin bir parçası geçici olarak yavaşlasa veya çökse bile veri kaybını önler ve genel dayanıklılığı artırır.
 
-- **Profil Yönetimi:**
-  - Kullanıcı bilgilerini görüntüleme ve güncelleme
-  - Role göre özel profil bilgileri yönetimi
-  - Hesap durumu yönetimi (aktif, pasif, askıya alınmış)
+Bölüm 2: Veritabanı Mimarisi (PostgreSQL)
+Veritabanı, sistemin "tek doğru kaynağıdır". Tüm kalıcı veriler burada saklanır.
 
-- **İlk Kayıt İşlemleri:**
-  - Driver kaydında sürücü özel bilgilerini oluşturma
-  - Distributor kaydında firma bilgilerini oluşturma
-  - Temel kullanıcı bilgilerini kaydetme
+users Tablosu:
 
-#### Veri Saklama:
-PostgreSQL kullanarak kullanıcı temel bilgileri, driver profilleri ve distributor profillerini saklar.
+Amacı: Platforma kayıt olan tüm bireylerin (sürücü veya dağıtıcı fark etmeksizin) ortak ve temel bilgilerini (e-posta, şifre, telefon) tutar.
 
----
+Kritik Sütunlar: user_type (ENUM), bir kullanıcının 'DRIVER' mı yoksa 'DISTRIBUTOR' mü olduğunu belirleyerek yetkilendirme mekanizmasının temelini oluşturur.
 
-### 2. **Driver Service** (Port: 8082)
-**Ana Sorumluluk:** Sürücülere özel tüm işlemler ve durum yönetimi
+drivers ve distributors Tabloları:
 
-#### Temel Görevleri:
-- **Durum Yönetimi:**
-  - Aktif bekleyiş durumu
-  - Belirli yöne gitme durumu
-  - Meşgul durumu (kargo taşıyor)
-  - Çevrimdışı durumu
+Amacı: users tablosundaki temel bilgilere ek olarak, her bir kullanıcı tipine özel bilgileri saklar. Örneğin, sürücüler için license_plate (plaka) ve rating_average (puan ortalaması); dağıtıcılar için ise company_name (şirket adı) ve balance (bakiye).
 
-- **Kargo İşlemleri:**
-  - Uygun kargoları listeleme
-  - Kargo tekliflerini kabul etme veya reddetme
-  - Kargoyu teslim alma işlemleri
-  - Kargoyu son alıcıya teslim etme
+Kritik Sütunlar: additional_attributes (JSONB). Bu sütun, gelecekte eklenebilecek (araç modeli, MERSİS no gibi) esnek verileri, veritabanı şemasını değiştirmeden saklamamızı sağlar.
 
-- **Konum ve Hareket:**
-  - Anlık konum bilgisini güncelleme
-  - Hareket rotası bilgilerini paylaşma
-  - Coğrafi sınırlar içinde kontrollerini yapma
+cargos Tablosu:
 
-- **Performans Takibi:**
-  - Sürücü puanlama sistemi
-  - Teslim geçmişi kayıtları
-  - Kazanç hesaplamaları ve raporları
+Amacı: Platformun ana nesnesi olan kargoların tüm bilgilerini ve yaşam döngüsünü tutar.
 
-#### Veri Saklama:
-PostgreSQL ve Redis kullanarak sürücü durumları, aktif kargolar, kazanç bilgileri ve performans verilerini saklar.
+Kritik Sütunlar:
 
----
+status (ENUM): Bir kargonun hangi aşamada olduğunu gösteren en önemli alandır:
 
-### 3. **Distributor Service** (Port: 8083)
-**Ana Sorumluluk:** Kargo gönderen firmalara özel işlemler
+PENDING_MATCHING: Kargo oluşturuldu, sürücü bekleniyor.
 
-#### Temel Görevleri:
-- **Kargo Yönetimi:**
-  - Yeni kargo siparişi oluşturma
-  - Mevcut kargo listesini görüntüleme
-  - Kargo durumunu takip etme
-  - Kargo iptali işlemleri
+OFFERED: Sürücüye teklif gönderildi.
 
-- **Ödeme ve Bakiye:**
-  - Hesap bakiyesini görüntüleme
-  - Bakiye ekleme işlemleri
-  - Ödeme geçmişini görüntüleme
-  - Fatura oluşturma ve indirme
+ASSIGNED: Sürücü teklifi kabul etti.
 
-- **Analiz ve Raporlama:**
-  - Kargo gönderim istatistikleri
-  - Maliyet analizi raporları
-  - Performans değerlendirmeleri
-  - Başarı oranları
+PICKED_UP: Sürücü kargoyu teslim aldı.
 
-#### Veri Saklama:
-PostgreSQL kullanarak distributor işlemleri, bakiye hareketleri ve istatistiksel verileri saklar.
+IN_TRANSIT: Kargo yolda.
 
----
+DELIVERED: Teslim edildi.
 
-### 4. **Cargo Service** (Port: 8084)
-**Ana Sorumluluk:** Kargo yaşam döngüsünün merkezi yönetimi
+public_tracking_token: Son kullanıcının giriş yapmadan kargosunu takip edebilmesi için üretilen, tahmin edilmesi imkansız, güvenli bir anahtardır.
 
-#### Temel Görevleri:
-- **Kargo Yaşam Döngüsü:**
-  - Kargo kaydının oluşturulması
-  - Durum güncellemelerinin takibi
-  - Kargo geçmişinin tutulması
-  - Detaylı kargo bilgilerinin saklanması
+reviews Tablosu:
 
-- **Takip Sistemi:**
-  - Gerçek zamanlı durum takibi
-  - Konum geçmişinin kaydedilmesi
-  - Tahmini teslim süresinin hesaplanması
-  - Otomatik bildirim tetiklemeleri
+Amacı: Sürücülere yapılan tüm puanlamaları ve yorumları saklar.
 
-- **Kargo Özellikleri:**
-  - Gönderici ve alıcı bilgileri
-  - Kargo türü ve boyut bilgileri
-  - Özel talimatlar
-  - Fiyat hesaplamaları
+Kritik Sütunlar: reviewer_type (ENUM). Puanlamayı yapanın 'CUSTOMER' (son kullanıcı) mı yoksa 'DISTRIBUTOR' (dağıtıcı) mı olduğunu ayırır. Bu, farklı kullanıcı tiplerinden gelen geri bildirimleri analiz etme imkanı sunar.
 
-#### Veri Saklama:
-PostgreSQL kullanarak kargo bilgileri, durum geçmişi ve takip verilerini saklar.
+user_documents Tablosu:
 
----
+Amacı: Sürücü ve dağıtıcıların sisteme yüklediği resmi belgelerin (kimlik fotoğrafı, araç ruhsatı, vergi levhası) kaydını tutar.
 
-### 5. **Matching Service** (Port: 8085)
-**Ana Sorumluluk:** Kargo ve sürücü eşleştirme algoritmaları
+Kritik Sütunlar: status (ENUM) sayesinde adminlerin bu belgeleri 'PENDING_REVIEW' (onay bekliyor), 'APPROVED' (onaylandı) veya 'REJECTED' (reddedildi) olarak işaretlemesini sağlar. Bu, platformun güvenliği için kritik bir süreçtir.
 
-#### Temel Görevleri:
-- **Akıllı Eşleştirme:**
-  - En kısa yol algoritması kullanarak optimal eşleştirme
-  - Sürücü durumu ve kapasitesini kontrol etme
-  - Mesafe ve maliyet optimizasyonu
-  - Dinamik fiyatlandırma hesaplamaları
+Bölüm 3: Servisler ve Sorumlulukları
+3.1. Spring Boot Ana Servisi
+Rolü: Sistemin ana iş akışlarını yöneten, dış dünya ile (mobil/web uygulamaları) konuşan ve veri tutarlılığını sağlayan merkezi servis.
 
-- **Havuz Yönetimi:**
-  - Bekleyen kargo havuzunu yönetme
-  - Aktif sürücü havuzunu güncel tutma
-  - Eşleştirme kurallarını uygulama
-  - Öncelik sıralaması yapma
+API Katmanı Detayları:
 
-- **Algoritma Kontrolü:**
-  - Eşleştirme başarı oranları
-  - Algoritma performans analizi
-  - Kural güncellemeleri
-  - A/B test yapabilme altyapısı
+Authentication API (/api/auth/...): Kullanıcı kaydı ve JWT (JSON Web Token) tabanlı güvenli giriş işlemlerini yönetir.
 
-#### Veri Saklama:
-Redis kullanarak hızlı eşleştirme işlemleri ve PostgreSQL kullanarak eşleştirme geçmişi saklar.
+User-Facing API'ler (/api/drivers, /api/distributors): Giriş yapmış kullanıcıların kendi profillerini yönetmesi, dashboard'larını görmesi, kargo oluşturması veya teklif kabul etmesi gibi işlemleri sağlar.
 
----
+Public API'ler (/api/public/...): Son kullanıcının (alıcının) giriş yapmadan, sadece SMS ile gelen güvenli token'lar aracılığıyla kargosunu takip etmesi, not bırakması ve puanlama yapması için kullanılır.
 
-### 6. **Location Service** (Port: 8086)
-**Ana Sorumluluk:** Konum yönetimi ve coğrafi işlemler
+Internal API (/api/internal/...): Dış dünyaya tamamen kapalıdır. Sadece Python servisinin, eşleştirme yaparken ihtiyaç duyduğu anlık sürücü verilerini (konum, durum vb.) çekmesi için kullanılır. Güvenliği bir API anahtarı ile sağlanır.
 
-#### Temel Görevleri:
-- **Gerçek Zamanlı Takip:**
-  - Sürücü konumlarının sürekli güncellenmesi
-  - Kargo rotasının kayıt altına alınması
-  - Hareket yönü ve hız bilgilerinin tutulması
+Kritik Servisler ve İş Mantığı:
 
-- **Coğrafi Hesaplamalar:**
-  - İki nokta arası mesafe hesaplama
-  - En optimal rota önerisi
-  - Adres koordinat dönüşümü
-  - Coğrafi sınır kontrolları
+CargoServiceImpl: Yeni bir kargo oluşturulduğunda, veritabanına kaydeder, durumunu PENDING_MATCHING olarak ayarlar ve CargoMatchingRequestProducer aracılığıyla RabbitMQ'ya bir mesaj gönderir.
 
-- **Takip Özellikleri:**
-  - Son alıcı için görsel takip arayüzü
-  - Geçmiş rota kayıtları
-  - Tahmin edilen varış süreleri
+MatchingResultConsumer: RabbitMQ'nun sonuç kuyruğunu dinler. Python servisinden bir eşleştirme sonucu geldiğinde, bu mesajı işler: ilgili kargonun durumunu OFFERED olarak günceller, delivery_offers tablosuna kayıt atar ve NotificationService aracılığıyla sürücüye anlık WebSocket bildirimi gönderir.
 
-#### Veri Saklama:
-MongoDB kullanarak coğrafi koordinatlar, rota bilgileri ve konum geçmişi saklar.
+ReviewServiceImpl: Son kullanıcıdan bir puanlama geldiğinde, reviews tablosuna kaydeder ve ardından ilgili sürücünün rating_average'ını yeniden hesaplayıp günceller.
 
----
+3.2. Python Eşleştirme Servisi
+Rolü: Tek bir işe odaklanmış, yüksek performanslı bir "uzman"dır: En verimli kargo-sürücü eşleşmesini bulmak.
 
-### 7. **Notification Service** (Port: 8087)
-**Ana Sorumluluk:** Tüm bildirim türlerinin yönetimi
+İşleyiş Adımları:
 
-#### Temel Görevleri:
-- **Anında Bildirimler:**
-  - Mobil cihazlara push notification
-  - Web tarayıcısına anlık bildirimler
-  - WebSocket ile gerçek zamanlı güncellemeler
+Dinleme: Sürekli olarak RabbitMQ'daki cargo.matching.request.queue kuyruğunu dinler.
 
-- **Geleneksel Bildirimler:**
-  - SMS mesajları
-  - Email bildirimleri
-  - Şablon tabanlı mesaj gönderimi
+Mesajı Alma: Yeni bir kargo talebi mesajı geldiğinde, içindeki JSON verisini okur.
 
-- **Bildirim Yönetimi:**
-  - Kullanıcı bildirim tercihlerini saklama
-  - Bildirim geçmişi tutma
-  - Gönderim başarı durumları
-  - Bildirim şablonları yönetimi
+Veri Toplama: Spring Boot servisinin /api/internal/drivers/available API'sini çağırarak o an müsait olan tüm sürücülerin konum, puan, araç tipi gibi verilerini çeker.
 
-#### Veri Saklama:
-MongoDB kullanarak bildirim kayıtları, şablonlar ve kullanıcı tercihlerini saklar.
+Algoritmayı Çalıştırma: Elindeki kargo bilgisi ve tüm sürücü verilerini kullanarak kendi algoritmasını çalıştırır. Bu algoritma; mesafeyi, sürücünün mevcut rotasına ne kadar saptığını, sürücünün puanını, kargonun önceliğini vb. birçok faktörü hesaba katar.
 
----
+Sonuç Hazırlama: En uygun bulduğu bir veya daha fazla sürücünün ID'sini ve teklif detaylarını içeren bir JSON sonucu oluşturur.
 
-### 8. **Payment Service** (Port: 8088)
-**Ana Sorumluluk:** Tüm ödeme işlemlerinin yönetimi
+Sonucu Gönderme: Bu sonuç JSON'ını RabbitMQ'daki cargo.matching.result.queue kuyruğuna gönderir.
 
-#### Temel Görevleri:
-- **Distributor Ödemeleri:**
-  - Hesap bakiyesi yönetimi
-  - Kargo bedeli kesimi
-  - Ödeme tutma ve serbest bırakma işlemleri
-  - Otomatik ücret hesaplaması
+Bölüm 4: Admin Paneli Stratejisi
+Seçilen Yaklaşım: Sıfırdan bir admin paneli yazmak yerine, Appsmith veya Retool gibi hazır bir "headless" (arayüzsüz) admin paneli aracı kullanmak.
 
-- **Sürücü Ödemeleri:**
-  - Kazanç hesaplamaları
-  - Ödeme transferi işlemleri
-  - Komisyon hesaplamaları
+Neden?: Geliştirme sürecini aylardan günlere indirir. Bu, ekibin zamanını müşterilerin doğrudan kullandığı ana ürün özelliklerine odaklamasını sağlar. Filtreleme, arama, veri düzenleme gibi standart özellikler için yeniden kod yazma zahmetinden kurtarır.
 
-- **Mali İşlemler:**
-  - İşlem geçmişi kayıtları
-  - Fatura oluşturma
-  - Geri ödeme işlemleri
-  - Mali raporlama
-
-#### Veri Saklama:
-PostgreSQL kullanarak ödeme kayıtları, işlem geçmişi ve mali raporları saklar.
-
----
-
-## Servisler Arası İletişim
-
-### Senkron İletişim:
-- Kullanıcı kimlik doğrulaması için tüm servisler User Service ile iletişim kurar
-- Ödeme doğrulaması için Cargo Service, Payment Service ile konuşur
-- Rota hesaplama için Matching Service, Location Service ile iletişim kurar
-
-### Asenkron İletişim (Kafka):
-- Kargo oluşturulduğunda Matching Service bilgilendirilir
-- Sürücü durumu değiştiğinde ilgili tüm servisler haberdar edilir
-- Ödeme işlemleri tamamlandığında Cargo ve Notification servisleri bilgilendirilir
-- Konum güncellemeleri tüm ilgili servislere anlık iletilir
-
-## Veri Tabanı Stratejisi
-
-### PostgreSQL Kullanan Servisler:
-ACID özelliklerinin kritik olduğu servisler için tercih edilir:
-- User Service (kullanıcı bilgileri)
-- Cargo Service (kargo verileri)
-- Payment Service (mali işlemler)
-- Driver Service (sürücü verileri)
-
-### MongoDB Kullanan Servisler:
-Esnek yapı ve coğrafi sorguların önemli olduğu servisler için:
-- Location Service (koordinat verileri)
-- Notification Service (bildirim kayıtları)
-
-### Redis Kullanan Servisler:
-Hızlı erişim ve önbellek için:
-- Driver Service (aktif sürücü durumları)
-- Matching Service (eşleştirme havuzu)
-- User Service (oturum yönetimi)
-
-## API Gateway Yönetimi
-
-Nginx kullanarak tüm isteklerin tek noktadan yönetilmesi:
-- URL'ye göre otomatik yönlendirme
-- Yük dengeleme ve önbellekleme
-- Güvenlik kontrolleri
-- İstek hızı sınırlaması
-
-## Güvenlik Yaklaşımı
-
-- JWT tabanlı kimlik doğrulama
-- Role tabanlı erişim kontrolü
-- API seviyesinde güvenlik kontrolleri
-- Veri şifreleme ve güvenli iletişim
-
+Entegrasyon: Bu araç, veritabanına kısıtlı yetkilere sahip bir kullanıcı ile bağlanır. Geliştirici, sürükle-bırak yöntemleriyle, hangi verilerin görüneceğini ve "Onayla", "Reddet" gibi butonların hangi işlemleri yapacağını birkaç saat içinde tasarlayabilir.
