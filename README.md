@@ -1,106 +1,148 @@
-Rotax - Kapsamlı Teknik Mimari ve İş Akışları Detayları
-Bu doküman, projenin her bir parçasını derinlemesine inceleyerek tam bir teknik referans sunmaktadır.
+# 📦 Gelişmiş Lojistik Platformu
 
-Bölüm 1: Sistem Mimarisi ve Felsefesi
-Proje, modern yazılım geliştirme prensipleriyle tasarlanmış bir mikroservis mimarisine sahiptir. Bu, sistemin farklı parçalarının bağımsız olarak geliştirilebilmesi, güncellenebilmesi ve ölçeklendirilebilmesi anlamına gelir.
+Dağıtıcıları, mobil sürücüleri ve son kullanıcıları modern ve verimli bir ekosistemde birleştiren mikroservis tabanlı bir lojistik çözümü.
 
-Spring Boot Ana Servisi (Sistemin Kalbi): Tüm kullanıcı etkileşimlerini, veri tutarlılığını ve temel iş kurallarını yöneten ana omurgadır. Güvenilir ve sağlam olması için Java/Spring Boot tercih edilmiştir.
+## 🎯 Proje Hakkında
 
-Python Eşleştirme Servisi (Sistemin Beyni): Yoğun hesaplama ve potansiyel yapay zeka/makine öğrenmesi gerektiren "en uygun sürücüyü bulma" görevine odaklanmış uzman bir servistir. Bu iş için en iyi araçları sunan Python ile geliştirilecektir.
+Bu proje, geleneksel kargo ve lojistik süreçlerine teknolojik bir yaklaşım getirmeyi amaçlamaktadır. E-ticaret firmaları (Dağıtıcılar) için kargo gönderimini kolaylaştırırken, bireysel sürücüler için ek gelir fırsatları yaratır. Tüm süreç, son kullanıcının kargosunu canlı olarak takip edebildiği ve geri bildirimde bulunabildiği şeffaf bir yapı üzerine kurulmuştur.
 
-RabbitMQ (Sistemin Kan Damarları): Bu iki servis arasındaki iletişimi sağlayan asenkron mesajlaşma sistemidir. Bir servis diğerine doğrudan "bağımlı" değildir; bunun yerine, işlenecek görevleri (mesajları) bu ortak posta kutusuna bırakırlar. Bu, sistemin bir parçası geçici olarak yavaşlasa veya çökse bile veri kaybını önler ve genel dayanıklılığı artırır.
+Proje, ölçeklenebilirlik ve bakım kolaylığı sağlamak amacıyla **Spring Boot** (ana iş mantığı) ve **Python** (akıllı eşleştirme) servisleri olmak üzere iki ana bileşenden oluşan bir mikroservis mimarisi kullanmaktadır.
 
-Bölüm 2: Veritabanı Mimarisi (PostgreSQL)
-Veritabanı, sistemin "tek doğru kaynağıdır". Tüm kalıcı veriler burada saklanır.
+## ✨ Özellikler
 
-users Tablosu:
+### 🏢 Dağıtıcı (Distributor) Özellikleri
+- Güvenli kullanıcı kaydı ve profil yönetimi
+- Sisteme bakiye yükleme ve harcama geçmişini görüntüleme
+- Detaylı kargo bilgilerini (adres, boyut, fotoğraf) sisteme yükleme
+- Gönderilen kargoların durumunu anlık olarak takip etme
+- Teslimatlar sonrası sürücülere puan ve yorum yapma
 
-Amacı: Platforma kayıt olan tüm bireylerin (sürücü veya dağıtıcı fark etmeksizin) ortak ve temel bilgilerini (e-posta, şifre, telefon) tutar.
+### 🚗 Sürücü (Driver) Özellikleri
+- Mobil uygulama üzerinden kolay kayıt ve belge (kimlik, ruhsat) yükleme
+- Anlık konum ve uygunluk durumunu (Aktif/Pasif) bildirme
+- Yakınındaki veya rotası üzerindeki kargo tekliflerini bildirim olarak alma
+- Teklif detaylarını (ücret, mesafe, rota sapması) görüntüleyip kabul/reddetme
+- Kazanç geçmişini ve performans metriklerini (puan ortalaması vb.) görme
 
-Kritik Sütunlar: user_type (ENUM), bir kullanıcının 'DRIVER' mı yoksa 'DISTRIBUTOR' mü olduğunu belirleyerek yetkilendirme mekanizmasının temelini oluşturur.
+### 📱 Son Kullanıcı (Alıcı) Özellikleri
+- Üyelik gerektirmeyen, SMS ile gönderilen güvenli link üzerinden kargo takibi
+- Harita üzerinde kargonun anlık konumunu ve tahmini varış süresini görme
+- "Komşuma bırak" gibi teslimat notları ekleme
+- Teslimat sonrası sürücüye puan ve yorum bırakma
 
-drivers ve distributors Tabloları:
+### 👨‍💼 Admin Özellikleri
+- Sürücü ve dağıtıcıların kimlik/belge doğrulamalarını yapma (onay/ret)
+- Tüm kullanıcıları, kargoları ve işlemleri yönetme
+- Sistem sağlığını ve genel istatistikleri izleme
 
-Amacı: users tablosundaki temel bilgilere ek olarak, her bir kullanıcı tipine özel bilgileri saklar. Örneğin, sürücüler için license_plate (plaka) ve rating_average (puan ortalaması); dağıtıcılar için ise company_name (şirket adı) ve balance (bakiye).
+## 🏗️ Mimari
 
-Kritik Sütunlar: additional_attributes (JSONB). Bu sütun, gelecekte eklenebilecek (araç modeli, MERSİS no gibi) esnek verileri, veritabanı şemasını değiştirmeden saklamamızı sağlar.
+Sistem, görevlerin net bir şekilde ayrıldığı mikroservis mimarisine dayanmaktadır.
 
-cargos Tablosu:
+```
++----------------+      +---------------------+      +----------------+
+|                |      |                     |      |                |
+|   Clients      |----->| Spring Boot (API)   |----->|   PostgreSQL   |
+| (Flutter/React)|      | (Ana İş Mantığı)    |      |  (Veritabanı)  |
+|                |      |                     |      |                |
++----------------+      +---------+-----------+      +----------------+
+                                  |
+                                  | (RabbitMQ)
+                                  v
++----------------+      +---------+-----------+
+|                |      |                     |
+| Python Service |<-----|      RabbitMQ       |
+| (Eşleştirme    |      |   (Mesaj Kuyruğu)   |
+|  Algoritması)  |----->|                     |
+|                |      |                     |
+|                |      +---------------------+
++----------------+
+```
 
-Amacı: Platformun ana nesnesi olan kargoların tüm bilgilerini ve yaşam döngüsünü tutar.
+### Bileşenler
 
-Kritik Sütunlar:
+- **Spring Boot Ana Servisi**: Sistemin kalbidir. Tüm API isteklerini karşılar, veritabanı işlemlerini yönetir ve ana iş akışlarını kontrol eder.
 
-status (ENUM): Bir kargonun hangi aşamada olduğunu gösteren en önemli alandır:
+- **Python Eşleştirme Servisi**: Tek bir göreve odaklanmıştır: Gelen kargo talepleri için en verimli sürücüyü bulmak. Bu, karmaşık algoritmalar ve potansiyel makine öğrenmesi modelleri içerir.
 
-PENDING_MATCHING: Kargo oluşturuldu, sürücü bekleniyor.
+- **RabbitMQ**: İki servis arasındaki asenkron iletişimi sağlar, sistemin esnekliğini ve dayanıklılığını artırır.
 
-OFFERED: Sürücüye teklif gönderildi.
+- **PostgreSQL**: Tüm verilerin kalıcı olarak saklandığı merkezi veritabanıdır.
 
-ASSIGNED: Sürücü teklifi kabul etti.
+- **Admin Paneli**: Appsmith/Retool gibi hazır bir araç ile veritabanına bağlanarak operasyonel işlemlerin yönetildiği arayüzdür.
 
-PICKED_UP: Sürücü kargoyu teslim aldı.
+## 🛠️ Teknoloji Yığını
 
-IN_TRANSIT: Kargo yolda.
+| Kategori | Teknolojiler |
+|----------|-------------|
+| **Backend (Ana Servis)** | Java 17, Spring Boot 3.x, Spring Data JPA, Spring Security (JWT), Hibernate |
+| **Backend (Eşleştirme Servisi)** | Python 3.10+, FastAPI, Pika (RabbitMQ Client) |
+| **Veritabanı** | PostgreSQL 15+ |
+| **Mesajlaşma** | RabbitMQ |
+| **Mobil Uygulama** | Flutter *(Planlanan)* |
+| **Web Arayüzleri** | React *(Planlanan)* |
+| **DevOps** | Docker, Docker Compose |
 
-DELIVERED: Teslim edildi.
+## 🚀 Kurulum ve Başlatma
 
-public_tracking_token: Son kullanıcının giriş yapmadan kargosunu takip edebilmesi için üretilen, tahmin edilmesi imkansız, güvenli bir anahtardır.
+Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin:
 
-reviews Tablosu:
+### Gereksinimler
 
-Amacı: Sürücülere yapılan tüm puanlamaları ve yorumları saklar.
+- Java 17+
+- Maven veya Gradle
+- Python 3.10+
+- Docker ve Docker Compose
 
-Kritik Sütunlar: reviewer_type (ENUM). Puanlamayı yapanın 'CUSTOMER' (son kullanıcı) mı yoksa 'DISTRIBUTOR' (dağıtıcı) mı olduğunu ayırır. Bu, farklı kullanıcı tiplerinden gelen geri bildirimleri analiz etme imkanı sunar.
+### Adımlar
 
-user_documents Tablosu:
+1. **Repository'yi Klonlayın:**
 
-Amacı: Sürücü ve dağıtıcıların sisteme yüklediği resmi belgelerin (kimlik fotoğrafı, araç ruhsatı, vergi levhası) kaydını tutar.
+```bash
+git clone https://github.com/kullanici-adiniz/proje-adiniz.git
+cd proje-adiniz
+```
 
-Kritik Sütunlar: status (ENUM) sayesinde adminlerin bu belgeleri 'PENDING_REVIEW' (onay bekliyor), 'APPROVED' (onaylandı) veya 'REJECTED' (reddedildi) olarak işaretlemesini sağlar. Bu, platformun güvenliği için kritik bir süreçtir.
+2. **Altyapıyı Başlatın (Veritabanı ve RabbitMQ):**
 
-Bölüm 3: Servisler ve Sorumlulukları
-3.1. Spring Boot Ana Servisi
-Rolü: Sistemin ana iş akışlarını yöneten, dış dünya ile (mobil/web uygulamaları) konuşan ve veri tutarlılığını sağlayan merkezi servis.
+Aşağıdaki komut, Docker kullanarak PostgreSQL ve RabbitMQ servislerini başlatacaktır.
 
-API Katmanı Detayları:
+```bash
+docker-compose up -d
+```
 
-Authentication API (/api/auth/...): Kullanıcı kaydı ve JWT (JSON Web Token) tabanlı güvenli giriş işlemlerini yönetir.
+3. **Backend (Spring Boot) Servisini Yapılandırın ve Çalıştırın:**
 
-User-Facing API'ler (/api/drivers, /api/distributors): Giriş yapmış kullanıcıların kendi profillerini yönetmesi, dashboard'larını görmesi, kargo oluşturması veya teklif kabul etmesi gibi işlemleri sağlar.
+- `src/main/resources/application.properties` dosyasını açın
+- Veritabanı, RabbitMQ ve JWT ayarlarınızı yapılandırın
+- Uygulamayı çalıştırın:
 
-Public API'ler (/api/public/...): Son kullanıcının (alıcının) giriş yapmadan, sadece SMS ile gelen güvenli token'lar aracılığıyla kargosunu takip etmesi, not bırakması ve puanlama yapması için kullanılır.
+```bash
+mvn spring-boot:run
+```
 
-Internal API (/api/internal/...): Dış dünyaya tamamen kapalıdır. Sadece Python servisinin, eşleştirme yaparken ihtiyaç duyduğu anlık sürücü verilerini (konum, durum vb.) çekmesi için kullanılır. Güvenliği bir API anahtarı ile sağlanır.
+4. **Python Eşleştirme Servisini Yapılandırın ve Çalıştırın:**
 
-Kritik Servisler ve İş Mantığı:
+- Python servisi dizinine gidin
+- Gerekli kütüphaneleri yükleyin:
 
-CargoServiceImpl: Yeni bir kargo oluşturulduğunda, veritabanına kaydeder, durumunu PENDING_MATCHING olarak ayarlar ve CargoMatchingRequestProducer aracılığıyla RabbitMQ'ya bir mesaj gönderir.
+```bash
+pip install -r requirements.txt
+```
 
-MatchingResultConsumer: RabbitMQ'nun sonuç kuyruğunu dinler. Python servisinden bir eşleştirme sonucu geldiğinde, bu mesajı işler: ilgili kargonun durumunu OFFERED olarak günceller, delivery_offers tablosuna kayıt atar ve NotificationService aracılığıyla sürücüye anlık WebSocket bildirimi gönderir.
+- RabbitMQ bağlantı bilgilerini içeren ortam değişkenlerini (environment variables) ayarlayın
+- Servisi başlatın:
 
-ReviewServiceImpl: Son kullanıcıdan bir puanlama geldiğinde, reviews tablosuna kaydeder ve ardından ilgili sürücünün rating_average'ını yeniden hesaplayıp günceller.
+```bash
+python main.py
+```
 
-3.2. Python Eşleştirme Servisi
-Rolü: Tek bir işe odaklanmış, yüksek performanslı bir "uzman"dır: En verimli kargo-sürücü eşleşmesini bulmak.
+Proje artık yerel makinenizde çalışıyor olmalı! 🎉
 
-İşleyiş Adımları:
+## 📄 Lisans
 
-Dinleme: Sürekli olarak RabbitMQ'daki cargo.matching.request.queue kuyruğunu dinler.
+Bu proje MIT Lisansı altında lisanslanmıştır. Daha fazla bilgi için [LICENSE](LICENSE) dosyasına bakın.
 
-Mesajı Alma: Yeni bir kargo talebi mesajı geldiğinde, içindeki JSON verisini okur.
+---
 
-Veri Toplama: Spring Boot servisinin /api/internal/drivers/available API'sini çağırarak o an müsait olan tüm sürücülerin konum, puan, araç tipi gibi verilerini çeker.
-
-Algoritmayı Çalıştırma: Elindeki kargo bilgisi ve tüm sürücü verilerini kullanarak kendi algoritmasını çalıştırır. Bu algoritma; mesafeyi, sürücünün mevcut rotasına ne kadar saptığını, sürücünün puanını, kargonun önceliğini vb. birçok faktörü hesaba katar.
-
-Sonuç Hazırlama: En uygun bulduğu bir veya daha fazla sürücünün ID'sini ve teklif detaylarını içeren bir JSON sonucu oluşturur.
-
-Sonucu Gönderme: Bu sonuç JSON'ını RabbitMQ'daki cargo.matching.result.queue kuyruğuna gönderir.
-
-Bölüm 4: Admin Paneli Stratejisi
-Seçilen Yaklaşım: Sıfırdan bir admin paneli yazmak yerine, Appsmith veya Retool gibi hazır bir "headless" (arayüzsüz) admin paneli aracı kullanmak.
-
-Neden?: Geliştirme sürecini aylardan günlere indirir. Bu, ekibin zamanını müşterilerin doğrudan kullandığı ana ürün özelliklerine odaklamasını sağlar. Filtreleme, arama, veri düzenleme gibi standart özellikler için yeniden kod yazma zahmetinden kurtarır.
-
-Entegrasyon: Bu araç, veritabanına kısıtlı yetkilere sahip bir kullanıcı ile bağlanır. Geliştirici, sürükle-bırak yöntemleriyle, hangi verilerin görüneceğini ve "Onayla", "Reddet" gibi butonların hangi işlemleri yapacağını birkaç saat içinde tasarlayabilir.
+⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın!
