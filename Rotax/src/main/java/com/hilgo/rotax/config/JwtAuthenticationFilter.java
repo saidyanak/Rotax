@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.hilgo.rotax.entity.User;
-import com.hilgo.rotax.repository.UserRepository;
 import com.hilgo.rotax.service.JwtService;
 
 import jakarta.servlet.FilterChain;
@@ -26,7 +25,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final UserRepository userRepository;
+
+    // JwtAuthenticationFilter.java - doFilterInternal metodunun daha verimli hali
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -46,26 +46,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         jwt = authHeader.substring(7);
         username = jwtService.extractUsername(jwt);
 
-
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // 1. Kullanıcıyı SADECE BİR KEZ UserDetailsService ile çekiyoruz.
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            User user;
-            user = userRepository.findByUsername(username).get();
-            if(!user.getActive())
-                throw new RuntimeException("Exit error");
+            // 2. 'active' kontrolü için UserDetails'i kendi User tipimize cast ediyoruz.
+            // Bu işlem veritabanına TEKRAR gitmez.
+            if (userDetails instanceof User) {
+                User user = (User) userDetails;
+                if (!user.getActive()) {
+                    // Burada hata fırlatmak yerine, isteği reddetmek daha doğru olabilir.
+                    // response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    // return;
+                    throw new RuntimeException("User is not active");
+                }
+            }
+
             if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
                         userDetails.getAuthorities()
                 );
-
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
-
         filterChain.doFilter(request, response);
     }
 }

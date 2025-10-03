@@ -28,10 +28,10 @@ public class SwaggerConfig {
                         .description("Bu API dokümantasyonu, Rotax projesi kapsamında Sürücü (Driver), Dağıtıcı (Distributor) ve Admin operasyonlarını yöneten REST servislerini kapsamaktadır.")
                         .contact(new Contact()
                                 .name("Hilgo Yazılım")
-                                .email("iletisim@hilgo.com"))
+                                .email("said.ynk@gmail.com"))
                         .license(new License()
                                 .name("Apache 2.0")
-                                .url("http://springdoc.org")))
+                                .url("https://springdoc.org")))
 
                 // 2. JWT Güvenlik Şemasını Tanımlar
                 .components(new Components()
