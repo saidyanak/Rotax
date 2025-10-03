@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table
+@Table(name = "app_user")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
@@ -26,7 +26,7 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column
+    @Column(name = "user_id")
     private Long id;
 
     @Column

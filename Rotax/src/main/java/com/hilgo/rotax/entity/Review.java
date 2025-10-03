@@ -1,5 +1,6 @@
 package com.hilgo.rotax.entity;
 
+import com.hilgo.rotax.enums.ReviewerType;
 import jakarta.persistence.*;
 import lombok.*;
 

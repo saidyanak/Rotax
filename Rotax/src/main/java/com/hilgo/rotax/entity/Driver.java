@@ -27,6 +27,6 @@ public class Driver extends User{
     @Enumerated(EnumType.STRING)
     private CarType carType;
 
-    @OneToMany
+    @OneToMany(mappedBy = "driver")
     private List<Cargo> cargos;
 }
