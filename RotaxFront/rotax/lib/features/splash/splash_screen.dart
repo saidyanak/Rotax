@@ -18,6 +18,9 @@ class SplashScreen extends StatelessWidget {
       backgroundColor: Colors.black,
       duration: 3000,
 
+
     );
+
   }
+
 }
