@@ -1,208 +1,148 @@
-# Rotax - Gelişmiş Lojistik Platformu
+# 🚚 Rotax - Gelişmiş Lojistik Platformu
 
-Dağıtıcıları, mobil sürücüleri ve son kullanıcıları modern ve verimli bir ekosistemde birleştiren mikroservis tabanlı bir lojistik çözümü.
+> Dağıtıcıları, mobil sürücüleri ve son kullanıcıları modern bir ekosistemde birleştiren mikroservis tabanlı lojistik çözümü.
 
-## Proje Hakkında
+## 📖 Proje Hakkında
 
-Bu proje, geleneksel kargo ve lojistik süreçlerine teknolojik bir yaklaşım getirmeyi amaçlamaktadır. E-ticaret firmaları (Dağıtıcılar) için kargo gönderimini kolaylaştırırken, bireysel sürücüler için ek gelir fırsatları yaratır. Tüm süreç, son kullanıcının kargosunu canlı olarak takip edebildiği ve geri bildirimde bulunabildiği şeffaf bir yapı üzerine kurulmuştur.
+Rotax, geleneksel kargo ve lojistik süreçlerine teknolojik bir yaklaşım getiren, ölçeklenebilir ve modern bir platformdur. E-ticaret firmaları için kargo gönderimini kolaylaştırırken, bireysel sürücüler için ek gelir fırsatları yaratır ve son kullanıcılara şeffaf, canlı takip imkanı sunar.
 
-Proje, ölçeklenebilirlik ve bakım kolaylığı sağlamak amacıyla **Spring Boot** (ana iş mantığı) ve **Python** (akıllı eşleştirme) servisleri olmak üzere iki ana bileşenden oluşan bir mikroservis mimarisi kullanmaktadır.
+Bu repository, Rotax platformunun tüm bileşenlerini barındıran ana merkezdir. Mikroservis mimarisi prensiplerine göre tasarlanmış, her bir servisin kendi klasöründe organize edildiği modüler bir yapıya sahiptir.
 
-## Özellikler
-
-### Dağıtıcı (Distributor) Özellikleri
-- Güvenli kullanıcı kaydı ve profil yönetimi
-- Sisteme bakiye yükleme ve harcama geçmişini görüntüleme
-- Detaylı kargo bilgilerini (adres, boyut, fotoğraf) sisteme yükleme
-- Gönderilen kargoların durumunu anlık olarak takip etme
-- Teslimatlar sonrası sürücülere puan ve yorum yapma
-
-### Sürücü (Driver) Özellikleri
-- Mobil uygulama üzerinden kolay kayıt ve belge (kimlik, ruhsat) yükleme
-- Anlık konum ve uygunluk durumunu (Aktif/Pasif) bildirme
-- Yakınındaki veya rotası üzerindeki kargo tekliflerini bildirim olarak alma
-- Teklif detaylarını (ücret, mesafe, rota sapması) görüntüleyip kabul/reddetme
-- Kazanç geçmişini ve performans metriklerini (puan ortalaması vb.) görme
-
-### Son Kullanıcı (Alıcı) Özellikleri
-- Üyelik gerektirmeyen, SMS ile gönderilen güvenli link üzerinden kargo takibi
-- Harita üzerinde kargonun anlık konumunu ve tahmini varış süresini görme
-- "Komşuma bırak" gibi teslimat notları ekleme
-- Teslimat sonrası sürücüye puan ve yorum bırakma
-
-### Admin Özellikleri
-- Sürücü ve dağıtıcıların kimlik/belge doğrulamalarını yapma (onay/ret)
-- Tüm kullanıcıları, kargoları ve işlemleri yönetme
-- Sistem sağlığını ve genel istatistikleri izleme
-
-## Mimari
-
-Sistem, görevlerin net bir şekilde ayrıldığı mikroservis mimarisine dayanmaktadır.
+## 🏗️ Mimari Genel Bakış
 
 ```
-+----------------+      +---------------------+      +----------------+
-|                |      |                     |      |                |
-|   Clients      |----->| Spring Boot (API)   |----->|   PostgreSQL   |
-| (Flutter/React)|      | (Ana İş Mantığı)    |      |  (Veritabanı)  |
-|                |      |                     |      |                |
-+----------------+      +---------+-----------+      +----------------+
-                                  |
-                                  | (RabbitMQ)
-                                  v
-+----------------+      +---------+-----------+
-|                |      |                     |
-| Python Service |<-----|      RabbitMQ       |
-| (Eşleştirme    |      |   (Mesaj Kuyruğu)   |
-|  Algoritması)  |----->|                     |
-|                |      |                     |
-|                |      +---------------------+
-+----------------+
+┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
+│  Mobile App     │────────▶│   Backend API    │────────▶│   PostgreSQL    │
+│  (Flutter)      │         │  (Spring Boot)   │         │                 │
+└─────────────────┘         └────────┬─────────┘         └─────────────────┘
+                                     │
+┌─────────────────┐                  │ RabbitMQ
+│   Web Panel     │                  │
+│   (React)       │────────▶         ▼
+└─────────────────┘         ┌────────────────────┐
+                            │ Matching Service   │
+                            │    (Python)        │
+                            └────────────────────┘
 ```
 
-### Bileşenler
-
-**Spring Boot Ana Servisi**: Sistemin kalbidir. Tüm API isteklerini karşılar, veritabanı işlemlerini yönetir ve ana iş akışlarını kontrol eder.
-
-**Python Eşleştirme Servisi**: Tek bir göreve odaklanmıştır: Gelen kargo talepleri için en verimli sürücüyü bulmak.
-
-**RabbitMQ**: İki servis arasındaki asenkron iletişimi sağlar, sistemin esnekliğini ve dayanıklılığını artırır.
-
-**PostgreSQL**: Tüm verilerin kalıcı olarak saklandığı merkezi veritabanıdır.
-
-**Admin Paneli**: Appsmith/Retool gibi hazır bir araç ile veritabanına bağlanarak operasyonel işlemlerin yönetildiği arayüzdür.
-
-## Teknoloji Yığını
-
-| Kategori | Teknolojiler |
-|----------|-------------|
-| **Backend (Ana Servis)** | Java 21, Spring Boot 3.5.6, Spring Data JPA, Spring Security (JWT), Hibernate |
-| **Backend (Eşleştirme Servisi)** | Python 3.10+, FastAPI, Pika (RabbitMQ Client) |
-| **Veritabanı** | PostgreSQL 15+ |
-| **Mesajlaşma** | RabbitMQ |
-| **Mobil Uygulama** | Flutter *(Planlanan)* |
-| **Web Arayüzleri** | React *(Planlanan)* |
-| **DevOps** | Docker, Docker Compose |
-
-## Paket Yapısı (Spring Boot)
-
-Proje, bakım kolaylığı ve ölçeklenebilirlik için standart katmanlı mimari prensiplerini takip eder:
+## 📁 Repository Yapısı
 
 ```
-com.yourcompany.deliveryapp
-├── config/                  // Spring Security, WebSocket, RabbitMQ ayarları
-├── controller/
-│   ├── api/                 // Dış dünyaya açık, istemci API'leri (Distributor, Driver vb.)
-│   └── internal/            // Servisler arası (internal) iletişim API'leri (Python için)
-├── dto/                     // Request/Response ve Mesajlaşma DTO'ları
-├── entity/                  // Veritabanı tablolarını temsil eden JPA Entity'leri
-├── enums/                   // Proje genelindeki Enum'lar (UserType, CargoStatus vb.)
-├── exception/               // Özel exception sınıfları ve Global Exception Handler
-├── messaging/               // RabbitMQ Producer ve Consumer sınıfları
-├── repository/              // Veritabanı erişim katmanı (JPA Repositories)
-├── security/                // JWT token yönetimi ve güvenlik filtreleri
-└── service/                 // Tüm iş mantığının bulunduğu katman
+rotax/
+├── backend/                    # Spring Boot Ana Servisi
+│   ├── src/
+│   ├── Dockerfile
+│   └── README.md              # 📘 Backend detaylı dokümantasyon
+│
+├── matching-service/          # Python Eşleştirme Servisi
+│   ├── src/
+│   ├── requirements.txt
+│   └── README.md              # 📘 Eşleştirme servisi dokümantasyon
+│
+├── frontend-mobile/           # Flutter Mobil Uygulama
+│   ├── lib/
+│   ├── android/
+│   ├── ios/
+│   └── README.md              # 📘 Mobil uygulama dokümantasyon
+│
+├── frontend-web/              # React Web Paneli
+│   ├── src/
+│   ├── public/
+│   └── README.md              # 📘 Web paneli dokümantasyon
+│
+├── docker-compose.yml         # Altyapı servisleri (PostgreSQL, RabbitMQ)
+└── README.md                  # 📄 Bu dosya
 ```
 
-## API Endpoint'leri
+## 🚀 Hızlı Başlangıç
 
-API, kullanıcı rollerine ve erişim seviyelerine göre mantıksal gruplara ayrılmıştır. (Daha detaylı dokümantasyon için Swagger/OpenAPI kullanılabilir.)
+### Ön Gereksinimler
 
-### Kimlik Doğrulama (Authentication)
-
-| Metot | URL | Açıklama |
-|-------|-----|----------|
-| POST | `/api/auth/register/{userType}` | Yeni Sürücü veya Dağıtıcı kaydı oluşturur |
-| POST | `/api/auth/login` | Kullanıcı girişi yapar ve JWT döndürür |
-
-### Dağıtıcı (Distributor) Endpoint'leri
-
-| Metot | URL | Açıklama | Yetkilendirme |
-|-------|-----|----------|---------------|
-| POST | `/api/cargos` | Yeni bir kargo oluşturur | DISTRIBUTOR |
-| GET | `/api/distributors/dashboard` | Dağıtıcının dashboard verilerini getirir | DISTRIBUTOR |
-| GET | `/api/distributors/cargos` | Dağıtıcının tüm kargolarını listeler | DISTRIBUTOR |
-
-### Sürücü (Driver) Endpoint'leri
-
-| Metot | URL | Açıklama | Yetkilendirme |
-|-------|-----|----------|---------------|
-| PUT | `/api/drivers/status` | Sürücünün durumunu günceller (ACTIVE/INACTIVE) | DRIVER |
-| GET | `/api/drivers/dashboard` | Sürücünün dashboard verilerini getirir | DRIVER |
-| GET | `/api/drivers/offers` | Sürücüye gelen aktif kargo tekliflerini listeler | DRIVER |
-| POST | `/api/drivers/offers/{offerId}/accept` | Gelen kargo teklifini kabul eder | DRIVER |
-| PUT | `/api/cargos/{cargoId}/status/picked-up` | Kargoyu teslim aldığını bildirir | DRIVER |
-| PUT | `/api/cargos/{cargoId}/status/delivered` | Kargoyu teslim ettiğini bildirir | DRIVER |
-
-### Son Kullanıcı (Public) Endpoint'leri
-
-| Metot | URL | Açıklama | Yetkilendirme |
-|-------|-----|----------|---------------|
-| GET | `/api/public/track/{token}` | Güvenli token ile kargonun anlık konumunu getirir | Herkese Açık |
-| POST | `/api/public/track/{token}/notes` | Son kullanıcının teslimat notu eklemesini sağlar | Herkese Açık |
-| POST | `/api/public/review/{token}` | Güvenli token ile sürücüye puan ve yorum yapılmasını sağlar | Herkese Açık |
-
-### Servisler Arası (Internal) Endpoint'ler
-
-| Metot | URL | Açıklama | Yetkilendirme |
-|-------|-----|----------|---------------|
-| GET | `/api/internal/drivers/available` | Eşleştirme için uygun olan sürücüleri listeler | INTERNAL_SERVICE_KEY |
-
-## Kurulum ve Başlatma
-
-Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin:
-
-### Gereksinimler
-
-- Java 17+
-- Maven veya Gradle
-- Python 3.10+
 - Docker ve Docker Compose
+- Java 21+ (Backend için)
+- Python 3.10+ (Matching Service için)
+- Node.js 18+ (Web paneli için)
+- Flutter SDK (Mobil uygulama için)
 
-### Adımlar
+### Tüm Altyapıyı Başlatma
 
-1. **Repository'yi Klonlayın:**
-
-```bash
-git clone https://github.com/kullanici-adiniz/rotax.git
-cd rotax
-```
-
-2. **Altyapıyı Başlatın (Veritabanı ve RabbitMQ):**
-
-Aşağıdaki komut, Docker kullanarak PostgreSQL ve RabbitMQ servislerini başlatacaktır.
+Projenin altyapı servislerini (PostgreSQL, RabbitMQ) tek komutla başlatabilirsiniz:
 
 ```bash
 docker-compose up -d
 ```
 
-3. **Backend (Spring Boot) Servisini Yapılandırın ve Çalıştırın:**
+Bu komut aşağıdaki servisleri başlatır:
+- **PostgreSQL** (Port: 5432)
+- **RabbitMQ** (Port: 5672, Management UI: 15672)
 
-- `src/main/resources/application.properties` dosyasını açın
-- Veritabanı, RabbitMQ ve JWT ayarlarınızı yapılandırın
-- Uygulamayı çalıştırın:
+### Servisleri Ayrı Ayrı Çalıştırma
 
-```bash
-mvn spring-boot:run
-```
+Her bir bileşenin detaylı kurulum ve çalıştırma talimatları için ilgili README dosyalarına bakın:
 
-4. **Python Eşleştirme Servisini Yapılandırın ve Çalıştırın:**
+| Bileşen | Klasör | Dokümantasyon |
+|---------|--------|---------------|
+| Backend API | `backend/` | [backend/README.md](./backend/README.md) |
+| Eşleştirme Servisi | `matching-service/` | [matching-service/README.md](./matching-service/README.md) |
+| Mobil Uygulama | `frontend-mobile/` | [frontend-mobile/README.md](./frontend-mobile/README.md) |
+| Web Paneli | `frontend-web/` | [frontend-web/README.md](./frontend-web/README.md) |
 
-- Python servisi dizinine gidin
-- Gerekli kütüphaneleri yükleyin:
+## 🛠️ Teknoloji Stack
 
-```bash
-pip install -r requirements.txt
-```
+| Katman | Teknolojiler |
+|--------|-------------|
+| **Backend** | Java 21, Spring Boot 3.5.6, Spring Security, JWT |
+| **Eşleştirme** | Python 3.10+, FastAPI, Pika |
+| **Mobil** | Flutter, Dart |
+| **Web** | React, TypeScript |
+| **Veritabanı** | PostgreSQL 15+ |
+| **Message Broker** | RabbitMQ |
+| **DevOps** | Docker, Docker Compose |
 
-- RabbitMQ bağlantı bilgilerini içeren ortam değişkenlerini (environment variables) ayarlayın
-- Servisi başlatın:
+## ✨ Ana Özellikler
 
-```bash
-python main.py
-```
+### 📦 Dağıtıcılar İçin
+- Hızlı kargo oluşturma ve yönetimi
+- Anlık durum takibi
+- Sürücü değerlendirme sistemi
+- Bakiye ve ödeme yönetimi
 
-Proje artık yerel makinenizde çalışıyor olmalı!
+### 🚗 Sürücüler İçin
+- Akıllı kargo eşleştirme
+- Esnek çalışma saatleri
+- Kazanç takibi
+- Performans metrikleri
 
-## Lisans
+### 📱 Son Kullanıcılar İçin
+- Üyeliksiz, güvenli kargo takibi
+- Canlı konum güncellemeleri
+- Teslimat notları
+- Sürücü değerlendirme
 
-Bu proje MIT Lisansı altında lisanslanmıştır. Daha fazla bilgi için [LICENSE](LICENSE) dosyasına bakın.
+## 📚 Detaylı Dokümantasyon
+
+Her servisin kendi detaylı dokümantasyonu bulunmaktadır:
+
+- **[Backend README](./backend/README.md)** - API endpoint'leri, veritabanı şeması, güvenlik yapılandırması
+- **[Matching Service README](./matching-service/README.md)** - Eşleştirme algoritması, RabbitMQ entegrasyonu
+- **[Mobile App README](./frontend-mobile/README.md)** - Flutter kurulumu, build ve deployment
+- **[Web Panel README](./frontend-web/README.md)** - React uygulaması, state management, API entegrasyonu
+
+## 🔗 Faydalı Bağlantılar
+
+- **RabbitMQ Management UI**: http://localhost:15672 (Kullanıcı: guest, Şifre: guest)
+- **Backend API**: http://localhost:8080
+- **Matching Service**: http://localhost:8000
+- **Web Panel**: http://localhost:3000
+
+## 🤝 Katkıda Bulunma
+
+Katkılarınızı bekliyoruz! Lütfen bir özellik eklemeden veya hata düzeltmesi yapmadan önce bir issue açın.
+
+## 📄 Lisans
+
+Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+
+---
+
+**Not:** Her bir servisin bağımsız olarak çalıştırılabilmesi için yukarıdaki altyapı servislerinin (PostgreSQL ve RabbitMQ) aktif olması gerekmektedir.
