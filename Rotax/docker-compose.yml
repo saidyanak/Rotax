@@ -1,0 +1,28 @@
+# Docker Compose dosya formatının sürümünü belirtiyoruz.
+version: '3.8'
+
+# Çalıştırılacak servisleri (container'ları) tanımlıyoruz.
+services:
+  # 'db' isminde bir veritabanı servisi tanımlıyoruz.
+  db:
+    # Hazır, resmi postgres imajının 16. sürümünü kullan.
+    image: postgres:16
+    # Container'a kolayca tanınacak bir isim verelim.
+    container_name: rotax_postgres
+    # Container ilk başladığında kullanılacak ortam değişkenleri.
+    # Burası tam olarak sizin istediğiniz ayarları yaptığımız yer.
+    environment:
+      POSTGRES_DB: rotax_database   # <-- Veritabanı adını 'rotax_database' yap
+      POSTGRES_USER: postgres       # <-- Kullanıcı adını 'postgres' yap
+      POSTGRES_PASSWORD: 123456     # <-- Şifreyi '123456' yap
+    # Port yönlendirmesi: Bilgisayarımızın 5432 portunu container'ın 5432 portuna bağla.
+    # Bu sayede pgAdmin veya local'deki uygulamanızdan erişebilirsiniz.
+    ports:
+      - "5432:5432"
+    # Veri kalıcılığı: Container silinse bile verilerin kaybolmaması için bir volume tanımlıyoruz.
+    volumes:
+      - rotax-db-data:/var/lib/postgresql/data
+
+# Üst tarafta kullanılan 'rotax-db-data' ismindeki volume'ü Docker'a tanıtıyoruz.
+volumes:
+  rotax-db-data:
