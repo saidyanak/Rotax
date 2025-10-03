@@ -75,7 +75,7 @@ Sistem, görevlerin net bir şekilde ayrıldığı mikroservis mimarisine dayanm
 
 | Kategori | Teknolojiler |
 |----------|-------------|
-| **Backend (Ana Servis)** | Java 17, Spring Boot 3.x, Spring Data JPA, Spring Security (JWT), Hibernate |
+| **Backend (Ana Servis)** | Java 21, Spring Boot 3.5.6, Spring Data JPA, Spring Security (JWT), Hibernate |
 | **Backend (Eşleştirme Servisi)** | Python 3.10+, FastAPI, Pika (RabbitMQ Client) |
 | **Veritabanı** | PostgreSQL 15+ |
 | **Mesajlaşma** | RabbitMQ |
