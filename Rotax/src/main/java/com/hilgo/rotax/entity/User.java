@@ -7,8 +7,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import javax.management.relation.Role;
 import java.io.Serial;
 import java.security.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -16,8 +18,9 @@ import java.util.List;
 @Table(name = "app_user")
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
+@Builder
 @Setter
+@Getter
 @Inheritance(strategy = InheritanceType.JOINED)
 public class User implements UserDetails {
 
@@ -29,33 +32,53 @@ public class User implements UserDetails {
     @Column(name = "user_id")
     private Long id;
 
-    @Column
+    @Column(unique = true, nullable = false)
     private String username;
 
-    @Column
-    private String password;
-
-    @Column
+    @Column(unique = true, nullable = false)
     private String email;
 
-    @Column
-    private String phone;
+    @Column(nullable = false)
+    private String password;
 
-    @Column
-    private Timestamp registrationDate;
+    @Column(nullable = false)
+    private String firstName;
 
-    @Column
-    private String verificationCode;
+    @Column(nullable = false)
+    private String lastName;
 
-    @Column
-    private String verificationExpiresAt;
+    @Column(nullable = false)
+    private String phoneNumber;
 
-    @Column
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Roles role;
 
-    @Column(nullable = false, columnDefinition = "boolean default true")
-    private Boolean active = true;
+    @Column(nullable = false)
+    private Boolean enabled = true;
+
+    @Column(nullable = false)
+    private Boolean accountNonExpired = true;
+
+    @Column(nullable = false)
+    private Boolean accountNonLocked = true;
+
+    @Column(nullable = false)
+    private Boolean credentialsNonExpired = true;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -63,22 +86,32 @@ public class User implements UserDetails {
     }
 
     @Override
+    public String getPassword() {
+        return password;
+    }
+
+    @Override
+    public String getUsername() {
+        return username;
+    }
+
+    @Override
     public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
+        return accountNonExpired;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
+        return accountNonLocked;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
+        return credentialsNonExpired;
     }
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return enabled;
     }
 }

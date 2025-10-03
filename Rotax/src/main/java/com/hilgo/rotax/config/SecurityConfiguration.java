@@ -38,14 +38,19 @@ public class SecurityConfiguration {
                         // !!! SON DÜZELTME BURADA !!!
                         // Tarayıcının gönderdiği kontrol (preflight) isteklerine izin veriyoruz.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
+                        .requestMatchers("/api/driver/**").hasRole("DRIVER")
+                        .requestMatchers("/api/distributor/**").hasRole("DISTRIBUTOR")
+                        .requestMatchers("/api/pickup-point/**").hasRole("PICKUP_POINT")
                         .requestMatchers(
-                                "/auth/login",
-                                "/auth/register",
-                                "/auth/verify",
-                                "/auth/forgot",
-                                "/auth/change",
-                                "/auth/setPassword",
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/verify",
+                                "/api/auth/reset-password",
+                                "/api/auth/forgot-password",
+                                "/api/auth/validate-reset-token",
+                                "/api/auth/validate-reset-token/**",
+                                "/api/auth/change",
+                                "/api/auth/setPassword",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
