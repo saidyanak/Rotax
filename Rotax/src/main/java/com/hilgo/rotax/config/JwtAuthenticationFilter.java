@@ -54,7 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Bu işlem veritabanına TEKRAR gitmez.
             if (userDetails instanceof User) {
                 User user = (User) userDetails;
-                if (!user.getActive()) {
+                if (!user.getEnabled()) {
                     // Burada hata fırlatmak yerine, isteği reddetmek daha doğru olabilir.
                     // response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     // return;
