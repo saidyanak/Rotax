@@ -35,8 +35,6 @@ public class SecurityConfiguration {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // !!! SON DÜZELTME BURADA !!!
-                        // Tarayıcının gönderdiği kontrol (preflight) isteklerine izin veriyoruz.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/driver/**").hasRole("DRIVER")
                         .requestMatchers("/api/distributor/**").hasRole("DISTRIBUTOR")
@@ -45,8 +43,6 @@ public class SecurityConfiguration {
                                 "/api/auth/login",
                                 "/api/auth/register",
                                 "/api/auth/verify",
-
-
                                 "/api/auth/reset-password",
                                 "/api/auth/forgot-password",
                                 "/api/auth/validate-reset-token",

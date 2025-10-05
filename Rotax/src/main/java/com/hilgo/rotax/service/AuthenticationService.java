@@ -213,7 +213,7 @@ public class AuthenticationService {
                 )
         );
 
-        log.info("Login başarılı: {} - Role: {}", user.getUsername(), user.getRole());
+        log.info("Login oldum {} - Role: {}", user.getUsername(), user.getRole());
 
         // JWT token oluştur
         String jwtToken = jwtService.generateToken(user);

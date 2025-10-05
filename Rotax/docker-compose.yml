@@ -1,28 +1,39 @@
-# Docker Compose dosya formatının sürümünü belirtiyoruz.
 version: '3.8'
 
-# Çalıştırılacak servisleri (container'ları) tanımlıyoruz.
 services:
-  # 'db' isminde bir veritabanı servisi tanımlıyoruz.
-  db:
-    # Hazır, resmi postgres imajının 16. sürümünü kullan.
-    image: postgres:16
-    # Container'a kolayca tanınacak bir isim verelim.
-    container_name: rotax_postgres
-    # Container ilk başladığında kullanılacak ortam değişkenleri.
-    # Burası tam olarak sizin istediğiniz ayarları yaptığımız yer.
+  auth:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src:/app/src
+      - /app/target
+      - ~/.m2:/root/.m2
     environment:
-      POSTGRES_DB: rotax_database   # <-- Veritabanı adını 'rotax_database' yap
-      POSTGRES_USER: postgres       # <-- Kullanıcı adını 'postgres' yap
-      POSTGRES_PASSWORD: 123456     # <-- Şifreyi '123456' yap
-    # Port yönlendirmesi: Bilgisayarımızın 5432 portunu container'ın 5432 portuna bağla.
-    # Bu sayede pgAdmin veya local'deki uygulamanızdan erişebilirsiniz.
+      - JWT_SECRET=kfN1Dw/4e58EeF+9eJYb8TxP9TDPDeeHKhktwvGuUrA=
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD:-}
+    networks:
+      - webnet
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: rotax_postgres
+    environment:
+      POSTGRES_DB: rotax_database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
     ports:
       - "5432:5432"
-    # Veri kalıcılığı: Container silinse bile verilerin kaybolmaması için bir volume tanımlıyoruz.
     volumes:
       - rotax-db-data:/var/lib/postgresql/data
+    networks:
+      - webnet
 
-# Üst tarafta kullanılan 'rotax-db-data' ismindeki volume'ü Docker'a tanıtıyoruz.
 volumes:
   rotax-db-data:
+
+networks:
+  webnet:
+    driver: bridge
