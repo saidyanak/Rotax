@@ -1,7 +1,8 @@
 package com.hilgo.rotax.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration; // Bu satırı ekleyin
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,6 +29,12 @@ public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthenticationProvider authenticationProvider;
     private final LogoutHandler logoutHandler;
+    
+    @Value("${api.key.header}")
+    private String apiKeyHeader;
+    
+    @Value("${api.key.value}")
+    private String apiKeyValue;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,6 +46,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/driver/**").hasRole("DRIVER")
                         .requestMatchers("/api/distributor/**").hasRole("DISTRIBUTOR")
                         .requestMatchers("/api/pickup-point/**").hasRole("PICKUP_POINT")
+                        .requestMatchers("/api/internal/**").hasAuthority("INTERNAL_SERVICE")
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
@@ -49,6 +57,7 @@ public class SecurityConfiguration {
                                 "/api/auth/validate-reset-token/**",
                                 "/api/auth/change",
                                 "/api/auth/setPassword",
+                                "/api/public/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
@@ -59,6 +68,7 @@ public class SecurityConfiguration {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider)
+                .addFilterBefore(new ApiKeyAuthFilter(apiKeyValue, apiKeyHeader), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout
                         .logoutUrl("/auth/logout")
@@ -73,7 +83,7 @@ public class SecurityConfiguration {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Frontend URL'nizi açıkça ekleyin
+        // Frontend URLs
         configuration.setAllowedOrigins(Arrays.asList(
                 "https://cargoson-frontendd.onrender.com",
                 "http://localhost:3000",
