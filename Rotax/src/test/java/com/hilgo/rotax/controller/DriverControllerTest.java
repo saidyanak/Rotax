@@ -6,9 +6,9 @@ import com.hilgo.rotax.dto.LocationDTO;
 import com.hilgo.rotax.enums.DriverStatus;
 import com.hilgo.rotax.service.DriverService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class DriverControllerTest extends BaseIntegrationTest {
 
-    @MockBean
+    @MockitoBean
     private DriverService driverService;
 
     @Test

@@ -6,10 +6,11 @@ import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.enums.Size;
 import com.hilgo.rotax.service.DistributorService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -21,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class DistributorControllerTest extends BaseIntegrationTest {
 
-    @MockBean
+    @MockitoBean
     private DistributorService distributorService;
 
     @Test
@@ -35,6 +36,8 @@ class DistributorControllerTest extends BaseIntegrationTest {
                         .totalCargos(10)
                         .activeCargos(5)
                         .deliveredCargos(5)
+                        .currentCargos(Collections.emptyList())
+                        .recentCargos(Collections.emptyList())
                         .build()
         );
 
@@ -53,7 +56,7 @@ class DistributorControllerTest extends BaseIntegrationTest {
     void createCargo_ShouldReturnCreatedCargo() throws Exception {
         // Arrange
         CreateCargoRequest request = createSampleCargoRequest();
-        
+
         when(distributorService.createCargo(any(CreateCargoRequest.class))).thenReturn(
                 CargoDTO.builder()
                         .id(1L)
@@ -67,8 +70,8 @@ class DistributorControllerTest extends BaseIntegrationTest {
 
         // Act & Assert
         mockMvc.perform(post("/api/distributor/cargos")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.cargoSituation").value("CREATED"))
@@ -178,27 +181,31 @@ class DistributorControllerTest extends BaseIntegrationTest {
         selfLocation.setLongitude(-74.0060);
         selfLocation.setAddress("123 Pickup St");
         selfLocation.setCity("Pickup City");
-        
+        selfLocation.setDistrict("Test District");
+        selfLocation.setPostalCode("12345");
+
         LocationDTO targetLocation = new LocationDTO();
         targetLocation.setLatitude(34.0522);
         targetLocation.setLongitude(-118.2437);
         targetLocation.setAddress("456 Delivery St");
         targetLocation.setCity("Delivery City");
-        
+        targetLocation.setDistrict("Target District");
+        targetLocation.setPostalCode("67890");
+
         MeasureDTO measure = new MeasureDTO();
         measure.setWeight(10.0);
         measure.setWidth(20.0);
         measure.setHeight(30.0);
         measure.setLength(40.0);
         measure.setSize(Size.MEDIUM);
-        
+
         CreateCargoRequest request = new CreateCargoRequest();
         request.setSelfLocation(selfLocation);
         request.setTargetLocation(targetLocation);
         request.setMeasure(measure);
         request.setPhoneNumber("1234567890");
         request.setDescription("Test cargo");
-        
+
         return request;
     }
 }

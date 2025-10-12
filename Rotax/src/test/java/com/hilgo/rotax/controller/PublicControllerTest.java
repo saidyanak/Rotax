@@ -8,8 +8,8 @@ import com.hilgo.rotax.dto.TrackingResponse;
 import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.service.PublicService;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class PublicControllerTest extends BaseIntegrationTest {
 
-    @MockBean
+    @MockitoBean
     private PublicService publicService;
 
     @Test
@@ -52,7 +52,7 @@ class PublicControllerTest extends BaseIntegrationTest {
         request.setNote("Test delivery note");
         
         when(publicService.addDeliveryNote(anyString(), any(DeliveryNoteRequest.class)))
-                .thenReturn(new MessageResponse("Delivery note added successfully"));
+                .thenReturn(new MessageResponse("Delivery note added successfully", true));
 
         // Act & Assert
         mockMvc.perform(post("/api/public/track/ABC123/note")
@@ -70,7 +70,7 @@ class PublicControllerTest extends BaseIntegrationTest {
         request.setComment("Great service!");
         
         when(publicService.addReview(anyString(), any(ReviewDTO.class)))
-                .thenReturn(new MessageResponse("Review added successfully"));
+                .thenReturn(new MessageResponse("Review added successfully", true));
 
         // Act & Assert
         mockMvc.perform(post("/api/public/track/ABC123/review")

@@ -66,22 +66,10 @@ public class DistributorService {
         Distributor distributor = getCurrentDistributor();
         
         // Create and save locations
-        Location selfLocation = new Location();
-        selfLocation.setLatitude(request.getSelfLocation().getLatitude());
-        selfLocation.setLongitude(request.getSelfLocation().getLongitude());
-        selfLocation.setAddress(request.getSelfLocation().getAddress());
-        selfLocation.setCity(request.getSelfLocation().getCity());
-        selfLocation.setDistrict(request.getSelfLocation().getDistrict());
-        selfLocation.setPostalCode(request.getSelfLocation().getPostalCode());
+        Location selfLocation = getTargetLocation(request.getSelfLocation());
         locationRepository.save(selfLocation);
-        
-        Location targetLocation = new Location();
-        targetLocation.setLatitude(request.getTargetLocation().getLatitude());
-        targetLocation.setLongitude(request.getTargetLocation().getLongitude());
-        targetLocation.setAddress(request.getTargetLocation().getAddress());
-        targetLocation.setCity(request.getTargetLocation().getCity());
-        targetLocation.setDistrict(request.getTargetLocation().getDistrict());
-        targetLocation.setPostalCode(request.getTargetLocation().getPostalCode());
+
+        Location targetLocation = getTargetLocation(request.getTargetLocation());
         locationRepository.save(targetLocation);
         
         // Create and save measure
@@ -108,6 +96,17 @@ public class DistributorService {
         cargo = cargoRepository.save(cargo);
         
         return mapToCargoDTO(cargo);
+    }
+
+    private static Location getTargetLocation(LocationDTO request) {
+        Location targetLocation = new Location();
+        targetLocation.setLatitude(request.getLatitude());
+        targetLocation.setLongitude(request.getLongitude());
+        targetLocation.setAddress(request.getAddress());
+        targetLocation.setCity(request.getCity());
+        targetLocation.setDistrict(request.getDistrict());
+        targetLocation.setPostalCode(request.getPostalCode());
+        return targetLocation;
     }
 
     public List<CargoDTO> getAllCargos() {

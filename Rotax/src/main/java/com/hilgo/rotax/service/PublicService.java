@@ -70,7 +70,7 @@ public class PublicService {
         cargo.setDescription(request.getNote());
         cargoRepository.save(cargo);
         
-        return new MessageResponse("Delivery note added successfully");
+        return new MessageResponse("Delivery note added successfully", true);
     }
 
     @Transactional
@@ -93,13 +93,13 @@ public class PublicService {
         Review review = new Review();
         review.setRating(reviewDTO.getRating());
         review.setComment(reviewDTO.getComment());
-        review.setReviewerType(ReviewerType.RECIPIENT);
+        review.setReviewerType(ReviewerType.CUSTOMER);
         review.setDriver(driver);
         review.setReviewerName("Recipient");
         
         reviewRepository.save(review);
         
-        return new MessageResponse("Review added successfully");
+        return new MessageResponse("Review added successfully", true);
     }
 
     private LocationDTO mapToLocationDTO(com.hilgo.rotax.entity.Location location) {

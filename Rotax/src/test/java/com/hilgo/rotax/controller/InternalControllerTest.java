@@ -1,16 +1,17 @@
 package com.hilgo.rotax.controller;
 
 import com.hilgo.rotax.BaseIntegrationTest;
-import com.hilgo.rotax.dto.CargoDTO;
-import com.hilgo.rotax.enums.CargoSituation;
-import com.hilgo.rotax.service.DriverService;
+import com.hilgo.rotax.entity.Driver;
+import com.hilgo.rotax.entity.Location;
+import com.hilgo.rotax.enums.CarType;
+import com.hilgo.rotax.enums.DriverStatus;
+import com.hilgo.rotax.repository.DriverRepository;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -18,50 +19,84 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class InternalControllerTest extends BaseIntegrationTest {
 
-    @MockBean
-    private DriverService driverService;
+    @MockitoBean
+    private DriverRepository driverRepository;
 
     @Test
-    void getDriverCargos_ShouldReturnCargos_WhenApiKeyIsValid() throws Exception {
+    void getAvailableDrivers_ShouldReturnActiveDrivers() throws Exception {
         // Arrange
-        when(driverService.getDriverCargos(anyLong())).thenReturn(
-                List.of(
-                        CargoDTO.builder()
-                                .id(1L)
-                                .cargoSituation(CargoSituation.ASSIGNED)
-                                .driverId(1L)
-                                .driverName("Test Driver")
-                                .distributorId(2L)
-                                .distributorName("Test Distributor")
-                                .build()
-                )
-        );
+        Location location1 = new Location();
+        location1.setId(1L);
+        location1.setLatitude(40.7128);
+        location1.setLongitude(-74.0060);
+        location1.setAddress("123 Test St");
+        location1.setCity("New York");
+        location1.setDistrict("Manhattan");
+        location1.setPostalCode("10001");
+
+        Location location2 = new Location();
+        location2.setId(2L);
+        location2.setLatitude(34.0522);
+        location2.setLongitude(-118.2437);
+        location2.setAddress("456 Test Ave");
+        location2.setCity("Los Angeles");
+        location2.setDistrict("Downtown");
+        location2.setPostalCode("90001");
+
+        Driver driver1 = new Driver();
+        driver1.setId(1L);
+        driver1.setUsername("driver1");
+        driver1.setFirstName("John");
+        driver1.setLastName("Doe");
+        driver1.setEmail("john@example.com");
+        driver1.setTc("12345678901");
+        driver1.setDriverStatus(DriverStatus.ACTIVE);
+        driver1.setCarType(CarType.CAR2);
+        driver1.setLocation(location1);
+
+        Driver driver2 = new Driver();
+        driver2.setId(2L);
+        driver2.setUsername("driver2");
+        driver2.setFirstName("Jane");
+        driver2.setLastName("Smith");
+        driver2.setEmail("jane@example.com");
+        driver2.setTc("12345678902");
+        driver2.setDriverStatus(DriverStatus.ACTIVE);
+        driver2.setCarType(CarType.CAR2);
+        driver2.setLocation(location2);
+
+        when(driverRepository.findAllByDriverStatus(DriverStatus.ACTIVE))
+                .thenReturn(List.of(driver1, driver2));
 
         // Act & Assert
-        mockMvc.perform(get("/api/internal/drivers/1/cargos")
-                .header("X-API-KEY", "test-api-key")
-                .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/internal/drivers/available")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].cargoSituation").value("ASSIGNED"))
-                .andExpect(jsonPath("$[0].driverId").value(1))
-                .andExpect(jsonPath("$[0].driverName").value("Test Driver"));
+                .andExpect(jsonPath("$[0].username").value("driver1"))
+                .andExpect(jsonPath("$[0].firstName").value("John"))
+                .andExpect(jsonPath("$[0].lastName").value("Doe"))
+                .andExpect(jsonPath("$[0].driverStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$[0].carType").value("SEDAN"))
+                .andExpect(jsonPath("$[1].id").value(2))
+                .andExpect(jsonPath("$[1].username").value("driver2"))
+                .andExpect(jsonPath("$[1].firstName").value("Jane"))
+                .andExpect(jsonPath("$[1].lastName").value("Smith"))
+                .andExpect(jsonPath("$[1].driverStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$[1].carType").value("VAN"));
     }
 
     @Test
-    void getDriverCargos_ShouldReturnUnauthorized_WhenApiKeyIsInvalid() throws Exception {
-        // Act & Assert
-        mockMvc.perform(get("/api/internal/drivers/1/cargos")
-                .header("X-API-KEY", "invalid-api-key")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
-    }
+    void getAvailableDrivers_ShouldReturnEmptyList_WhenNoActiveDrivers() throws Exception {
+        // Arrange
+        when(driverRepository.findAllByDriverStatus(DriverStatus.ACTIVE))
+                .thenReturn(List.of());
 
-    @Test
-    void getDriverCargos_ShouldReturnUnauthorized_WhenApiKeyIsMissing() throws Exception {
         // Act & Assert
-        mockMvc.perform(get("/api/internal/drivers/1/cargos")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/internal/drivers/available")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }
