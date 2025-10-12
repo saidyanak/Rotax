@@ -1,42 +1,60 @@
 package com.hilgo.rotax.controller;
 
-import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.service.DistributorService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
 import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hilgo.rotax.dto.CargoDTO;
+import com.hilgo.rotax.dto.CreateCargoRequest;
+import com.hilgo.rotax.dto.DistributorDashboardResponse;
+import com.hilgo.rotax.service.DistributorService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/distributor")
+@Tag(name = "Distributor API", description = "Dağıtıcı (kargo gönderen firma) operasyonları için endpointler")
 @RequiredArgsConstructor
 public class DistributorController {
 
     private final DistributorService distributorService;
 
     @GetMapping("/dashboard")
+    @Operation(summary = "Dağıtıcı dashboard verilerini getirir", description = "Dağıtıcının gönderdiği kargolarla ilgili özet istatistikleri döndürür.")
     public ResponseEntity<DistributorDashboardResponse> getDashboard() {
         return ResponseEntity.ok(distributorService.getDistributorDashboard());
     }
 
     @PostMapping("/cargos")
+    @Operation(summary = "Yeni bir kargo gönderisi oluşturur", description = "Dağıtıcının sisteme yeni bir kargo eklemesini sağlar.")
     public ResponseEntity<CargoDTO> createCargo(@Valid @RequestBody CreateCargoRequest request) {
         return ResponseEntity.ok(distributorService.createCargo(request));
     }
 
     @GetMapping("/cargos")
+    @Operation(summary = "Dağıtıcıya ait tüm kargoları listeler", description = "Giriş yapmış olan dağıtıcının gönderdiği tüm kargoların listesini döndürür.")
     public ResponseEntity<List<CargoDTO>> getAllCargos() {
         return ResponseEntity.ok(distributorService.getAllCargos());
     }
 
     @GetMapping("/cargos/{cargoId}")
+    @Operation(summary = "Belirtilen ID'ye sahip kargo detayını getirir", description = "Tek bir kargonun detaylı bilgilerini döndürür.")
     public ResponseEntity<CargoDTO> getCargoById(@PathVariable Long cargoId) {
         return ResponseEntity.ok(distributorService.getCargoById(cargoId));
     }
 
     @PutMapping("/cargos/{cargoId}/cancel")
+    @Operation(summary = "Bir kargoyu iptal eder", description = "Henüz teslimat sürecine başlamamış bir kargonun iptal edilmesini sağlar.")
     public ResponseEntity<CargoDTO> cancelCargo(@PathVariable Long cargoId) {
         return ResponseEntity.ok(distributorService.cancelCargo(cargoId));
     }

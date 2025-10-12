@@ -1,6 +1,8 @@
 package com.hilgo.rotax.dto;
 
+import com.hilgo.rotax.enums.CarType;
 import com.hilgo.rotax.enums.Roles;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,8 +11,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import javax.management.relation.Role;
 
 @Data
 @Builder
@@ -41,4 +41,12 @@ public class RegisterRequest {
 
     @NotNull(message = "Kullanıcı rolü seçilmelidir")
     private Roles roles;
+
+    // Driver'a özel alanlar
+    private String tc;
+    private CarType carType;
+
+    // Distributor'a özel alanlar
+    private String vkn;
+    // `addressId` gibi alanlar varsa buraya eklenebilir.
 }

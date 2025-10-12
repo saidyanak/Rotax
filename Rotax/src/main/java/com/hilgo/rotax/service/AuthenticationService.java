@@ -2,12 +2,14 @@
 package com.hilgo.rotax.service;
 
 import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.entity.PasswordResetToken;
-import com.hilgo.rotax.entity.User;
+import com.hilgo.rotax.entity.*;
+import com.hilgo.rotax.enums.DriverStatus;
 import com.hilgo.rotax.repository.PasswordResetTokenRepository;
 import com.hilgo.rotax.repository.UserRepository;
+import jakarta.validation.constraints.Null;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.engine.internal.Nullability;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,6 +31,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
     @Transactional(readOnly = true)
     public UserDTO getCurrentUser(String username) {
@@ -59,9 +62,8 @@ public class AuthenticationService {
 
         passwordResetTokenRepository.save(resetToken);
 
-        // TODO: Email gönderme işlemi buraya eklenecek
-        // emailService.sendPasswordResetEmail(user.getEmail(), token);
-        log.info("Şifre sıfırlama tokeni oluşturuldu: {} için", user.getEmail());
+        // Email gönderme işlemi
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFirstName(), token);
 
         // Geliştirme ortamında token'ı loglayalım (Production'da kaldırılmalı!)
         log.warn("DEVELOPMENT - Reset Token: {}", token);
@@ -164,26 +166,47 @@ public class AuthenticationService {
             throw new IllegalArgumentException("Bu email adresi zaten kullanılıyor");
         }
 
-        // Yeni kullanıcı oluştur
-        User user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .phoneNumber(request.getPhoneNumber())
-                .role(request.getRoles())
-                .enabled(true)
-                .accountNonExpired(true)
-                .accountNonLocked(true)
-                .credentialsNonExpired(true)
-                .build();
+        User newUser;
+        switch (request.getRoles()) {
+            case DRIVER:
+                Driver driver = new Driver();
+                driver.setTc(request.getTc());
+                driver.setDriverStatus(DriverStatus.OFFLINE);
+                driver.setCarType(request.getCarType());
+                newUser = driver;
+                break;
+            case DISTRIBUTOR:
+                Distributor distributor = new Distributor();
+                distributor.setVkn(request.getVkn());
+                newUser = distributor;
+                break;
+            default:
+                // Diğer roller veya varsayılan durum için sadece User oluşturulabilir
+                // veya hata fırlatılabilir.
+                throw new IllegalArgumentException("Desteklenmeyen kullanıcı rolü: " + request.getRoles());
+        }
 
-        User savedUser = userRepository.save(user);
+        // Ortak alanları ata
+        newUser.setUsername(request.getUsername());
+        newUser.setEmail(request.getEmail());
+        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        newUser.setFirstName(request.getFirstName());
+        newUser.setLastName(request.getLastName());
+        newUser.setPhoneNumber(request.getPhoneNumber());
+        newUser.setRole(request.getRoles());
+        newUser.setEnabled(true); // E-posta onayı isteniyorsa 'false' ile başlayabilir
+        newUser.setAccountNonExpired(true);
+        newUser.setAccountNonLocked(true);
+        newUser.setCredentialsNonExpired(true);
+
+        User savedUser = userRepository.save(newUser);
         log.info("Kullanıcı başarıyla kaydedildi: {}", savedUser.getUsername());
 
         // JWT token oluştur
         String jwtToken = jwtService.generateToken(savedUser);
+
+        // Hoş geldin e-postası gönder
+        emailService.sendRegistrationConfirmationEmail(savedUser.getEmail(), savedUser.getFirstName());
 
         return AuthResponse.builder()
                 .token(jwtToken)
