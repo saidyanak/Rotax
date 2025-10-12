@@ -50,4 +50,7 @@ public class Review {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "distributor_id") // Son kullanıcı yapıyorsa bu alan null olabilir.
     private Distributor distributor;
+
+    @Column
+    private String reviewerName;
 }

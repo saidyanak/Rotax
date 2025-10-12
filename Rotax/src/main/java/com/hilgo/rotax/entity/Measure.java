@@ -23,6 +23,12 @@ public class Measure {
     private Double weight;
 
     @Column
+    private Double width;
+
+    @Column
+    private Double length;
+
+    @Column
     private Double height;
 
     @Enumerated(EnumType.STRING)

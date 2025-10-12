@@ -19,25 +19,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<MessageResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new MessageResponse(ex.getMessage()));
+                .body(new MessageResponse(ex.getMessage(), false));
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<MessageResponse> handleBadRequestException(BadRequestException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new MessageResponse(ex.getMessage()));
+                .body(new MessageResponse(ex.getMessage(), false));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<MessageResponse> handleAccessDeniedException(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new MessageResponse("You don't have permission to access this resource"));
+                .body(new MessageResponse("You don't have permission to access this resource", false));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<MessageResponse> handleBadCredentialsException(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new MessageResponse("Invalid username or password"));
+                .body(new MessageResponse("Invalid username or password", false));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -54,6 +54,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<MessageResponse> handleGenericException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new MessageResponse("An unexpected error occurred: " + ex.getMessage()));
+                .body(new MessageResponse("An unexpected error occurred: " + ex.getMessage(), false));
     }
 }

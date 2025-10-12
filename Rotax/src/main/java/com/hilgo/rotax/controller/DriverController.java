@@ -20,7 +20,7 @@ public class DriverController {
     @PutMapping("/status")
     public ResponseEntity<MessageResponse> updateStatus(@Valid @RequestBody DriverStatusUpdateRequest request) {
         driverService.updateDriverStatus(request);
-        return ResponseEntity.ok(new MessageResponse("Driver status updated successfully"));
+        return ResponseEntity.ok(new MessageResponse("Driver status updated successfully", true));
     }
 
     @GetMapping("/dashboard")

@@ -23,5 +23,17 @@ public class Location {
     private Double longitude;
 
     @Column
+    private String address;
+
+    @Column
+    private String city;
+
+    @Column
+    private String district;
+
+    @Column
+    private String postalCode;
+
+    @Column
     private LocalDateTime updatedAt;
 }
