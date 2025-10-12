@@ -1,19 +1,41 @@
 package com.hilgo.rotax.service;
 
-import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.entity.*;
-import com.hilgo.rotax.enums.CargoSituation;
-import com.hilgo.rotax.repository.*;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.hilgo.rotax.dto.AddressDTO;
+import com.hilgo.rotax.dto.CargoDTO;
+import com.hilgo.rotax.dto.CreateCargoRequest;
+import com.hilgo.rotax.dto.DistributorDashboardResponse;
+import com.hilgo.rotax.dto.LocationDTO;
+import com.hilgo.rotax.dto.MeasureDTO;
+import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
+import com.hilgo.rotax.dto.UserDTO;
+import com.hilgo.rotax.entity.Address;
+import com.hilgo.rotax.entity.Cargo;
+import com.hilgo.rotax.entity.Distributor;
+import com.hilgo.rotax.entity.Location;
+import com.hilgo.rotax.entity.Measure;
+import com.hilgo.rotax.enums.CargoSituation;
+import com.hilgo.rotax.exception.OperationNotAllowedException;
+import com.hilgo.rotax.exception.ResourceNotFoundException;
+import com.hilgo.rotax.exception.UserNotActiveException;
+import com.hilgo.rotax.repository.CargoRepository;
+import com.hilgo.rotax.repository.DistributorRepository;
+import com.hilgo.rotax.repository.LocationRepository;
+import com.hilgo.rotax.repository.MeasureRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DistributorService {
@@ -22,6 +44,8 @@ public class DistributorService {
     private final CargoRepository cargoRepository;
     private final LocationRepository locationRepository;
     private final MeasureRepository measureRepository;
+    private final FileStorageService fileStorageService;
+    private final AuthenticationService authenticationService;
 
     public Distributor getCurrentDistributor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -64,6 +88,11 @@ public class DistributorService {
     @Transactional
     public CargoDTO createCargo(CreateCargoRequest request) {
         Distributor distributor = getCurrentDistributor();
+
+        // Kullanıcı aktif değilse kargo oluşturmasını engelle
+        if (!distributor.getEnabled()) {
+            throw new UserNotActiveException("Hesabınız henüz onaylanmamıştır. Kargo oluşturamazsınız.");
+        }
         
         // Create and save locations
         Location selfLocation = getTargetLocation(request.getSelfLocation());
@@ -109,6 +138,60 @@ public class DistributorService {
         return targetLocation;
     }
 
+    @Transactional
+    public UserDTO updateProfile(ProfileUpdateRequestDTO request) {
+        Distributor distributor = getCurrentDistributor();
+
+        // DTO'dan gelen ve null/boş olmayan alanları güncelle
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            distributor.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null && !request.getLastName().isBlank()) {
+            distributor.setLastName(request.getLastName());
+        }
+        if (request.getPhoneNumber() != null) {
+            distributor.setPhoneNumber(request.getPhoneNumber());
+        }
+
+        // Adres bilgilerini güncelle
+        if (request.getAddress() != null) {
+            AddressDTO addressDTO = request.getAddress();
+            Address address = distributor.getAddress();
+            if (address == null) {
+                address = new Address();
+                distributor.setAddress(address);
+            }
+            // Adres alanlarını DTO'dan gelen verilerle güncelle
+            address.setAddress(addressDTO.getAddress());
+            address.setDistrict(addressDTO.getDistrict());
+            address.setCity(addressDTO.getCity());
+            address.setNeighbourhood(addressDTO.getNeighbourhood());
+            address.setStreet(addressDTO.getStreet());
+            address.setBuild(address.getBuild());
+        }
+
+        // Not: VKN gibi hassas veya değişmemesi gereken alanlar burada güncellenmez.
+
+        Distributor updatedDistributor = distributorRepository.save(distributor);
+        log.info("Dağıtıcı profili güncellendi: {}", updatedDistributor.getUsername());
+
+        // Güncellenmiş kullanıcıyı standart bir DTO'ya çevirip döndür
+        return authenticationService.convertToDTO(updatedDistributor);
+    }
+
+    @Transactional
+    public UserDTO updateProfilePicture(MultipartFile file) {
+        Distributor distributor = getCurrentDistributor();
+
+        String fileUrl = fileStorageService.storeFile(file);
+        distributor.setProfilePictureUrl(fileUrl);
+
+        Distributor updatedDistributor = distributorRepository.save(distributor);
+        log.info("Dağıtıcı profil resmi güncellendi: {}", distributor.getUsername());
+
+        return authenticationService.convertToDTO(updatedDistributor);
+    }
+
     public List<CargoDTO> getAllCargos() {
         Distributor distributor = getCurrentDistributor();
         
@@ -123,11 +206,11 @@ public class DistributorService {
         Distributor distributor = getCurrentDistributor();
         
         Cargo cargo = cargoRepository.findById(cargoId)
-                .orElseThrow(() -> new RuntimeException("Cargo not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cargo", "id", cargoId));
         
         // Check if cargo belongs to distributor
         if (!cargo.getDistributor().getId().equals(distributor.getId())) {
-            throw new RuntimeException("Cargo does not belong to this distributor");
+            throw new OperationNotAllowedException("Bu kargoyu görüntüleme yetkiniz yok.");
         }
         
         return mapToCargoDTO(cargo);
@@ -138,17 +221,17 @@ public class DistributorService {
         Distributor distributor = getCurrentDistributor();
         
         Cargo cargo = cargoRepository.findById(cargoId)
-                .orElseThrow(() -> new RuntimeException("Cargo not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cargo", "id", cargoId));
         
         // Check if cargo belongs to distributor
         if (!cargo.getDistributor().getId().equals(distributor.getId())) {
-            throw new RuntimeException("Cargo does not belong to this distributor");
+            throw new OperationNotAllowedException("Bu kargoyu iptal etme yetkiniz yok.");
         }
         
         // Check if cargo can be cancelled
         if (cargo.getCargoSituation() != CargoSituation.CREATED && 
             cargo.getCargoSituation() != CargoSituation.ASSIGNED) {
-            throw new RuntimeException("Cargo cannot be cancelled in its current state");
+            throw new OperationNotAllowedException("Kargo '" + cargo.getCargoSituation() + "' durumundayken iptal edilemez.");
         }
         
         cargo.setCargoSituation(CargoSituation.CANCELLED);

@@ -28,6 +28,21 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(ex.getMessage(), false));
     }
 
+    @ExceptionHandler(OperationNotAllowedException.class)
+    public ResponseEntity<MessageResponse> handleOperationNotAllowedException(OperationNotAllowedException ex) {
+        // Bu tür hatalar genellikle iş kuralı ihlalidir ve 'Forbidden' (403) olarak değerlendirilebilir.
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new MessageResponse(ex.getMessage(), false));
+    }
+
+    @ExceptionHandler(UserNotActiveException.class)
+    public ResponseEntity<MessageResponse> handleUserNotActiveException(UserNotActiveException ex) {
+        // Aktif olmayan kullanıcı 'Unauthorized' (401) veya 'Forbidden' (403) olabilir.
+        // Token geçerli ama kullanıcı pasif olduğu için 403 daha mantıklı.
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new MessageResponse(ex.getMessage(), false));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<MessageResponse> handleAccessDeniedException(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

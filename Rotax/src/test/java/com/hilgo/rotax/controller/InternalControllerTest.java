@@ -5,8 +5,11 @@ import com.hilgo.rotax.entity.Driver;
 import com.hilgo.rotax.entity.Location;
 import com.hilgo.rotax.enums.CarType;
 import com.hilgo.rotax.enums.DriverStatus;
+import com.hilgo.rotax.enums.Roles;
 import com.hilgo.rotax.repository.DriverRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -17,6 +20,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.security.test.context.support.WithMockUser; // <-- BU IMPORT'U EKLE
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+@WithMockUser(roles = "ADMIN") // <-- BU SATIRI SINIFIN BAŞINA EKLE
 class InternalControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
@@ -51,7 +61,8 @@ class InternalControllerTest extends BaseIntegrationTest {
         driver1.setEmail("john@example.com");
         driver1.setTc("12345678901");
         driver1.setDriverStatus(DriverStatus.ACTIVE);
-        driver1.setCarType(CarType.CAR2);
+        driver1.setRole(Roles.DRIVER); // <-- BU SATIRI EKLE
+        driver1.setCarType(CarType.CAR);
         driver1.setLocation(location1);
 
         Driver driver2 = new Driver();
@@ -61,6 +72,7 @@ class InternalControllerTest extends BaseIntegrationTest {
         driver2.setLastName("Smith");
         driver2.setEmail("jane@example.com");
         driver2.setTc("12345678902");
+        driver2.setRole(Roles.DRIVER); // <-- BU SATIRI EKLE
         driver2.setDriverStatus(DriverStatus.ACTIVE);
         driver2.setCarType(CarType.CAR2);
         driver2.setLocation(location2);
@@ -77,13 +89,13 @@ class InternalControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[0].firstName").value("John"))
                 .andExpect(jsonPath("$[0].lastName").value("Doe"))
                 .andExpect(jsonPath("$[0].driverStatus").value("ACTIVE"))
-                .andExpect(jsonPath("$[0].carType").value("SEDAN"))
+                .andExpect(jsonPath("$[0].carType").value("CAR"))
                 .andExpect(jsonPath("$[1].id").value(2))
                 .andExpect(jsonPath("$[1].username").value("driver2"))
                 .andExpect(jsonPath("$[1].firstName").value("Jane"))
                 .andExpect(jsonPath("$[1].lastName").value("Smith"))
                 .andExpect(jsonPath("$[1].driverStatus").value("ACTIVE"))
-                .andExpect(jsonPath("$[1].carType").value("VAN"));
+                .andExpect(jsonPath("$[1].carType").value("CAR2"));
     }
 
     @Test

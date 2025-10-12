@@ -91,4 +91,42 @@ public class EmailService {
             log.error("Kayıt onay e-postası gönderilirken hata oluştu: {}", to, e);
         }
     }
+
+    /**
+     * Asenkron olarak reddedilen belge hakkında bildirim e-postası gönderir.
+     * @param to E-postanın gönderileceği adres
+     * @param name Kullanıcının adı
+     * @param documentType Reddedilen belgenin türü
+     * @param rejectionReason Reddetme sebebi
+     */
+    @Async
+    public void sendDocumentRejectionEmail(String to, String name, String documentType, String rejectionReason) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
+
+            String htmlMsg = String.format("""
+                <h3>Merhaba %s,</h3>
+                <p>Rotax platformuna yüklemiş olduğunuz belgenizle ilgili bir güncelleme var.</p>
+                <p><strong>Belge Türü:</strong> %s</p>
+                <p><strong>Durum:</strong> <span style="color:red;">Reddedildi</span></p>
+                <p><strong>Sebep:</strong> %s</p>
+                <p>Lütfen profil sayfanızdan gerekli düzeltmeleri yaparak belgenizi yeniden yükleyiniz.</p>
+                <br>
+                <p>Teşekkürler,</p>
+                <p>Rotax Ekibi</p>
+                """, name, documentType, rejectionReason);
+
+            helper.setText(htmlMsg, true);
+            helper.setTo(to);
+            helper.setSubject("Rotax - Belge Değerlendirme Sonucu");
+            helper.setFrom(fromEmail);
+
+            mailSender.send(mimeMessage);
+            log.info("Belge reddetme e-postası başarıyla gönderildi: {}", to);
+
+        } catch (MessagingException e) {
+            log.error("Belge reddetme e-postası gönderilirken hata oluştu: {}", to, e);
+        }
+    }
 }

@@ -1,11 +1,20 @@
 package com.hilgo.rotax.entity;
 
+import java.util.List;
+
 import com.hilgo.rotax.enums.CarType;
 import com.hilgo.rotax.enums.DriverStatus;
-import jakarta.persistence.*;
-import lombok.*;
 
-import java.util.List;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Getter

@@ -9,12 +9,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hilgo.rotax.dto.CargoDTO;
-import com.hilgo.rotax.dto.CargoOfferDTO;
-import com.hilgo.rotax.dto.DriverDashboardResponse;
-import com.hilgo.rotax.dto.DriverStatusUpdateRequest;
+import com.hilgo.rotax.dto.*;
 import com.hilgo.rotax.dto.MessageResponse;
 import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.service.DriverService;
@@ -23,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/driver")
@@ -38,6 +37,19 @@ public class DriverController {
         driverService.updateDriverStatus(request);
         return ResponseEntity.ok(new MessageResponse("Driver status updated successfully", true));
     }
+
+    @PutMapping("/profile")
+    @Operation(summary = "Sürücü profil bilgilerini günceller", description = "Giriş yapmış olan sürücünün ad, soyad, telefon ve araç tipi gibi kişisel bilgilerini güncellemesini sağlar.")
+    public ResponseEntity<UserDTO> updateProfile(@Valid @RequestBody ProfileUpdateRequestDTO request) {
+        return ResponseEntity.ok(driverService.updateProfile(request));
+    }
+
+    @PostMapping(value = "/profile/picture", consumes = "multipart/form-data")
+    @Operation(summary = "Sürücü profil resmini yükler/günceller", description = "Sürücünün profil resmini sisteme yüklemesini sağlar.")
+    public ResponseEntity<UserDTO> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(driverService.updateProfilePicture(file));
+    }
+
 
     @GetMapping("/dashboard")
     @Operation(summary = "Sürücü dashboard verilerini getirir", description = "Sürücünün kazanç, puan, aktif ve son teslimatlar gibi özet bilgilerini döndürür.")

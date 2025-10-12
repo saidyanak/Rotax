@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.hilgo.rotax.entity.User;
+import com.hilgo.rotax.exception.UserNotActiveException;
 import com.hilgo.rotax.service.JwtService;
 
 import jakarta.servlet.FilterChain;
@@ -55,10 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userDetails instanceof User) {
                 User user = (User) userDetails;
                 if (!user.getEnabled()) {
-                    // Burada hata fırlatmak yerine, isteği reddetmek daha doğru olabilir.
-                    // response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    // return;
-                    throw new RuntimeException("User is not active");
+                    throw new UserNotActiveException("Kullanıcı hesabı aktif değil. Lütfen yönetici ile iletişime geçin.");
                 }
             }
 

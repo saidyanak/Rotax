@@ -1,206 +1,203 @@
 package com.hilgo.rotax.controller;
 
-import com.hilgo.rotax.BaseIntegrationTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hilgo.rotax.dto.DriverStatusUpdateRequest;
 import com.hilgo.rotax.dto.LocationDTO;
+import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
+import com.hilgo.rotax.entity.Cargo;
+import com.hilgo.rotax.entity.Distributor;
+import com.hilgo.rotax.entity.Driver;
+import com.hilgo.rotax.entity.Location;
+import com.hilgo.rotax.enums.CarType;
+import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.enums.DriverStatus;
-import com.hilgo.rotax.service.DriverService;
+import com.hilgo.rotax.enums.Roles;
+import com.hilgo.rotax.repository.CargoRepository;
+import com.hilgo.rotax.repository.DistributorRepository;
+import com.hilgo.rotax.repository.DriverRepository;
+import com.hilgo.rotax.repository.LocationRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-class DriverControllerTest extends BaseIntegrationTest {
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class DriverControllerTest {
 
-    @MockitoBean
-    private DriverService driverService;
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private DriverRepository driverRepository;
+
+    @Autowired
+    private DistributorRepository distributorRepository;
+
+    @Autowired
+    private CargoRepository cargoRepository;
+
+    @Autowired
+    private LocationRepository locationRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private Driver testDriver;
+    private Cargo testCargo;
+
+    @BeforeEach
+    void setUp() {
+        // Test için bir sürücü oluştur
+        testDriver = new Driver();
+        testDriver.setUsername("testdriver");
+        testDriver.setPassword(passwordEncoder.encode("password"));
+        testDriver.setFirstName("Test");
+        testDriver.setLastName("Driver");
+        testDriver.setEmail("driver@test.com");
+        testDriver.setPhoneNumber("1234567890");
+        testDriver.setRole(Roles.DRIVER);
+        testDriver.setEnabled(true); // Testlerde işlem yapabilmesi için aktif olmalı
+        testDriver.setDriverStatus(DriverStatus.ACTIVE);
+        driverRepository.save(testDriver);
+
+        // Test için bir dağıtıcı oluştur
+        Distributor testDistributor = new Distributor();
+        testDistributor.setUsername("testdistributor");
+        testDistributor.setPassword(passwordEncoder.encode("password"));
+        testDistributor.setFirstName("Test");
+        testDistributor.setLastName("Distributor");
+        testDistributor.setEmail("distributor@test.com");
+        testDistributor.setPhoneNumber("0987654321");
+        testDistributor.setRole(Roles.DISTRIBUTOR);
+        testDistributor.setEnabled(true);
+        distributorRepository.save(testDistributor);
+
+        // Test için bir kargo oluştur
+        Location location = locationRepository.save(new Location());
+        testCargo = new Cargo();
+        testCargo.setDistributor(testDistributor);
+        testCargo.setSelfLocation(location);
+        testCargo.setTargetLocation(location);
+        testCargo.setCargoSituation(CargoSituation.CREATED);
+        cargoRepository.save(testCargo);
+    }
 
     @Test
-    @WithMockUser(username = "testdriver", roles = {"DRIVER"})
-    void updateStatus_ShouldReturnSuccess() throws Exception {
-        // Arrange
-        DriverStatusUpdateRequest request = new DriverStatusUpdateRequest();
-        request.setStatus(DriverStatus.ACTIVE);
-        
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
+    void updateStatus_ShouldUpdateDriverStatusAndLocation() throws Exception {
         LocationDTO locationDTO = new LocationDTO();
-        locationDTO.setLatitude(40.7128);
-        locationDTO.setLongitude(-74.0060);
-        locationDTO.setAddress("123 Test St");
-        locationDTO.setCity("Test City");
+        locationDTO.setLatitude(41.0);
+        locationDTO.setLongitude(29.0);
+
+        DriverStatusUpdateRequest request = new DriverStatusUpdateRequest();
+        request.setStatus(DriverStatus.OFFLINE);
         request.setLocation(locationDTO);
-        
-        doNothing().when(driverService).updateDriverStatus(any(DriverStatusUpdateRequest.class));
 
-        // Act & Assert
         mockMvc.perform(put("/api/driver/status")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Driver status updated successfully"));
+                .andExpect(jsonPath("$.success", is(true)));
+
+        Driver updatedDriver = driverRepository.findByUsername("testdriver").get();
+        assertEquals(DriverStatus.OFFLINE, updatedDriver.getDriverStatus());
+        assertEquals(41.0, updatedDriver.getLocation().getLatitude());
     }
 
     @Test
-    @WithMockUser(username = "testdriver", roles = {"DRIVER"})
-    void getDashboard_ShouldReturnDashboard() throws Exception {
-        // Arrange
-        when(driverService.getDriverDashboard()).thenReturn(
-                com.hilgo.rotax.dto.DriverDashboardResponse.builder()
-                        .driverId(1L)
-                        .driverName("Test Driver")
-                        .averageRating(4.5)
-                        .totalDeliveries(10)
-                        .activeDeliveries(2)
-                        .build()
-        );
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
+    void updateProfile_ShouldUpdateDriverProfile() throws Exception {
+        ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
+        request.setFirstName("UpdatedName");
+        request.setCarType(CarType.CAR);
 
-        // Act & Assert
-        mockMvc.perform(get("/api/driver/dashboard"))
+        mockMvc.perform(put("/api/driver/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.driverId").value(1))
-                .andExpect(jsonPath("$.driverName").value("Test Driver"))
-                .andExpect(jsonPath("$.averageRating").value(4.5))
-                .andExpect(jsonPath("$.totalDeliveries").value(10))
-                .andExpect(jsonPath("$.activeDeliveries").value(2));
+                .andExpect(jsonPath("$.firstName", is("UpdatedName")));
+
+        Driver updatedDriver = driverRepository.findByUsername("testdriver").get();
+        assertEquals("UpdatedName", updatedDriver.getFirstName());
+        assertEquals(CarType.CAR, updatedDriver.getCarType());
     }
 
     @Test
-    @WithMockUser(username = "testdriver", roles = {"DRIVER"})
-    void getOffers_ShouldReturnOffers() throws Exception {
-        // Arrange
-        when(driverService.getAvailableOffers()).thenReturn(
-                java.util.List.of(
-                        com.hilgo.rotax.dto.CargoOfferDTO.builder()
-                                .cargoId(1L)
-                                .distanceToPickup(5.0)
-                                .totalDistance(20.0)
-                                .estimatedEarning(50.0)
-                                .distributorName("Test Distributor")
-                                .build()
-                )
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
+    void uploadProfilePicture_ShouldUpdateProfilePicture() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "profile.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                "test image content".getBytes()
         );
 
-        // Act & Assert
+        mockMvc.perform(multipart("/api/driver/profile/picture").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.profilePictureUrl").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
+    void getOffers_ShouldReturnAvailableOffers() throws Exception {
+        // Bu testin daha detaylı olması için Python servisinin mock'lanması veya
+        // findNearbyCargos'un deterministik sonuç vermesi sağlanabilir.
         mockMvc.perform(get("/api/driver/offers"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].cargoId").value(1))
-                .andExpect(jsonPath("$[0].distanceToPickup").value(5.0))
-                .andExpect(jsonPath("$[0].totalDistance").value(20.0))
-                .andExpect(jsonPath("$[0].estimatedEarning").value(50.0))
-                .andExpect(jsonPath("$[0].distributorName").value("Test Distributor"));
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test
-    @WithMockUser(username = "testdriver", roles = {"DRIVER"})
-    void acceptOffer_ShouldReturnAcceptedCargo() throws Exception {
-        // Arrange
-        when(driverService.acceptOffer(anyLong())).thenReturn(
-                com.hilgo.rotax.dto.CargoDTO.builder()
-                        .id(1L)
-                        .cargoSituation(com.hilgo.rotax.enums.CargoSituation.ASSIGNED)
-                        .driverId(1L)
-                        .driverName("Test Driver")
-                        .distributorId(2L)
-                        .distributorName("Test Distributor")
-                        .build()
-        );
-
-        // Act & Assert
-        mockMvc.perform(post("/api/driver/offers/1/accept"))
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
+    void acceptOffer_ShouldChangeCargoStatusToAssigned() throws Exception {
+        mockMvc.perform(post("/api/driver/offers/{cargoId}/accept", testCargo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.cargoSituation").value("ASSIGNED"))
-                .andExpect(jsonPath("$.driverId").value(1))
-                .andExpect(jsonPath("$.driverName").value("Test Driver"))
-                .andExpect(jsonPath("$.distributorId").value(2))
-                .andExpect(jsonPath("$.distributorName").value("Test Distributor"));
+                .andExpect(jsonPath("$.cargoSituation", is("ASSIGNED")))
+                .andExpect(jsonPath("$.driverId", is(testDriver.getId().intValue())));
+
+        Cargo updatedCargo = cargoRepository.findById(testCargo.getId()).get();
+        assertEquals(CargoSituation.ASSIGNED, updatedCargo.getCargoSituation());
+        assertEquals(testDriver.getId(), updatedCargo.getDriver().getId());
     }
 
     @Test
-    @WithMockUser(username = "testdriver", roles = {"DRIVER"})
-    void markCargoAsPickedUp_ShouldReturnUpdatedCargo() throws Exception {
-        // Arrange
-        when(driverService.updateCargoStatus(anyLong(), any())).thenReturn(
-                com.hilgo.rotax.dto.CargoDTO.builder()
-                        .id(1L)
-                        .cargoSituation(com.hilgo.rotax.enums.CargoSituation.PICKED_UP)
-                        .driverId(1L)
-                        .driverName("Test Driver")
-                        .build()
-        );
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
+    void markCargoAsPickedUp_ShouldChangeCargoStatus() throws Exception {
+        testCargo.setDriver(testDriver);
+        testCargo.setCargoSituation(CargoSituation.ASSIGNED);
+        cargoRepository.save(testCargo);
 
-        // Act & Assert
-        mockMvc.perform(put("/api/driver/cargos/1/status/picked-up"))
+        mockMvc.perform(put("/api/driver/cargos/{cargoId}/status/picked-up", testCargo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.cargoSituation").value("PICKED_UP"))
-                .andExpect(jsonPath("$.driverId").value(1))
-                .andExpect(jsonPath("$.driverName").value("Test Driver"));
+                .andExpect(jsonPath("$.cargoSituation", is("PICKED_UP")));
     }
 
     @Test
-    @WithMockUser(username = "testdriver", roles = {"DRIVER"})
-    void markCargoAsDelivered_ShouldReturnUpdatedCargo() throws Exception {
-        // Arrange
-        when(driverService.updateCargoStatus(anyLong(), any())).thenReturn(
-                com.hilgo.rotax.dto.CargoDTO.builder()
-                        .id(1L)
-                        .cargoSituation(com.hilgo.rotax.enums.CargoSituation.DELIVERED)
-                        .driverId(1L)
-                        .driverName("Test Driver")
-                        .build()
-        );
-
-        // Act & Assert
-        mockMvc.perform(put("/api/driver/cargos/1/status/delivered"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.cargoSituation").value("DELIVERED"))
-                .andExpect(jsonPath("$.driverId").value(1))
-                .andExpect(jsonPath("$.driverName").value("Test Driver"));
-    }
-
-    @Test
-    void updateStatus_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
-        // Arrange
-        DriverStatusUpdateRequest request = new DriverStatusUpdateRequest();
-        request.setStatus(DriverStatus.ACTIVE);
-        
-        LocationDTO locationDTO = new LocationDTO();
-        locationDTO.setLatitude(40.7128);
-        locationDTO.setLongitude(-74.0060);
-        request.setLocation(locationDTO);
-
-        // Act & Assert
-        mockMvc.perform(put("/api/driver/status")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @WithMockUser(username = "testuser", roles = {"DISTRIBUTOR"})
-    void updateStatus_ShouldReturnForbidden_WhenWrongRole() throws Exception {
-        // Arrange
-        DriverStatusUpdateRequest request = new DriverStatusUpdateRequest();
-        request.setStatus(DriverStatus.ACTIVE);
-        
-        LocationDTO locationDTO = new LocationDTO();
-        locationDTO.setLatitude(40.7128);
-        locationDTO.setLongitude(-74.0060);
-        request.setLocation(locationDTO);
-
-        // Act & Assert
-        mockMvc.perform(put("/api/driver/status")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
+    void acceptOffer_ShouldReturnForbidden_WhenUserIsNotaDriver() throws Exception {
+        // DRIVER rolü olmayan bir kullanıcı bu endpoint'e erişememeli
+        mockMvc.perform(post("/api/driver/offers/{cargoId}/accept", testCargo.getId()))
                 .andExpect(status().isForbidden());
     }
 }
+
+

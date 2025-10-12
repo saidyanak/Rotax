@@ -9,17 +9,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hilgo.rotax.dto.CargoDTO;
 import com.hilgo.rotax.dto.CreateCargoRequest;
 import com.hilgo.rotax.dto.DistributorDashboardResponse;
+import com.hilgo.rotax.dto.UserDTO;
+import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
 import com.hilgo.rotax.service.DistributorService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/distributor")
@@ -33,6 +37,18 @@ public class DistributorController {
     @Operation(summary = "Dağıtıcı dashboard verilerini getirir", description = "Dağıtıcının gönderdiği kargolarla ilgili özet istatistikleri döndürür.")
     public ResponseEntity<DistributorDashboardResponse> getDashboard() {
         return ResponseEntity.ok(distributorService.getDistributorDashboard());
+    }
+
+    @PutMapping("/profile")
+    @Operation(summary = "Dağıtıcı profil bilgilerini günceller", description = "Giriş yapmış olan dağıtıcının ad, soyad ve telefon gibi kişisel bilgilerini güncellemesini sağlar.")
+    public ResponseEntity<UserDTO> updateProfile(@Valid @RequestBody ProfileUpdateRequestDTO request) {
+        return ResponseEntity.ok(distributorService.updateProfile(request));
+    }
+
+    @PostMapping(value = "/profile/picture", consumes = "multipart/form-data")
+    @Operation(summary = "Dağıtıcı profil resmini yükler/günceller", description = "Dağıtıcının profil resmini sisteme yüklemesini sağlar.")
+    public ResponseEntity<UserDTO> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(distributorService.updateProfilePicture(file));
     }
 
     @PostMapping("/cargos")
