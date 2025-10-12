@@ -1,0 +1,708 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6",
+		"name": "Rotax Lojistik Platformu API",
+		"description": "Bu API dokümantasyonu, Rotax projesi kapsamında Sürücü (Driver), Dağıtıcı (Distributor) ve Admin operasyonlarını yöneten REST servislerini kapsamaktadır.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "Kimlik doğrulama ve kullanıcı kayıt işlemleri",
+			"item": [
+				{
+					"name": "Kullanıcı girişi",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// 200 OK durum kodunu kontrol et",
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// JSON cevabını işle",
+									"const responseBody = pm.response.json();",
+									"",
+									"// Cevapta token olup olmadığını ve string formatında olduğunu kontrol et",
+									"pm.test(\"Response body contains a token\", function () {",
+									"    pm.expect(responseBody.token).to.exist;",
+									"    pm.expect(responseBody.token).to.be.a('string');",
+									"});",
+									"",
+									"// Eğer token varsa, 'token' isimli collection değişkenine ata",
+									"if (responseBody.token) {",
+									"    pm.collectionVariables.set(\"token\", responseBody.token);",
+									"    console.log(\"Login Token'ı collection değişkenine kaydedildi.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"usernameOrEmail\": \"driver@example.com\",\n  \"password\": \"string123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Username veya email ile giriş yapma"
+					},
+					"response": []
+				},
+				{
+					"name": "Yeni kullanıcı kaydı",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"yenikullanici\",\n  \"email\": \"yeni@example.com\",\n  \"password\": \"string123\",\n  \"firstName\": \"Ali\",\n  \"lastName\": \"Veli\",\n  \"phoneNumber\": \"5551234567\",\n  \"roles\": \"DRIVER\",\n  \"tc\": \"12345678901\",\n  \"carType\": \"CAR\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Driver, Distributor veya Pickup Point olarak kayıt olma"
+					},
+					"response": []
+				},
+				{
+					"name": "Çıkış yap",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Kullanıcı oturumunu sonlandırır"
+					},
+					"response": []
+				},
+				{
+					"name": "Mevcut kullanıcı bilgisi",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Login olan kullanıcının bilgilerini getirir"
+					},
+					"response": []
+				},
+				{
+					"name": "Şifre değiştirme",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/change-password?oldPassword=eskiSifre123&newPassword=yeniSifre123",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"change-password"
+							],
+							"query": [
+								{
+									"key": "oldPassword",
+									"value": "eskiSifre123"
+								},
+								{
+									"key": "newPassword",
+									"value": "yeniSifre123"
+								}
+							]
+						},
+						"description": "Mevcut şifre ile yeni şifre belirleme (Login gerekli)"
+					},
+					"response": []
+				},
+				{
+					"name": "Şifremi unuttum",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"kullanici@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Email adresine şifre sıfırlama linki gönderir"
+					},
+					"response": []
+				},
+				{
+					"name": "Şifre sıfırlama token doğrulama",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"buraya_gelen_token_kodu\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/validate-reset-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"validate-reset-token"
+							]
+						},
+						"description": "Frontend'in token'ın geçerliliğini kontrol etmesi için kullanılır"
+					},
+					"response": []
+				},
+				{
+					"name": "Şifre sıfırlama token doğrulama (GET)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/validate-reset-token/buraya_gelen_token_kodu",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"validate-reset-token",
+								"buraya_gelen_token_kodu"
+							]
+						},
+						"description": "URL parametresi ile token doğrulama"
+					},
+					"response": []
+				},
+				{
+					"name": "Şifre sıfırlama",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"buraya_gelen_token_kodu\",\n  \"newPassword\": \"yeniSifre123!\",\n  \"confirmPassword\": \"yeniSifre123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Token ile yeni şifre belirleme"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "driver-controller",
+			"item": [
+				{
+					"name": "updateStatus",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ACTIVE\",\n  \"location\": {\n    \"latitude\": 40.7128,\n    \"longitude\": -74.0060,\n    \"address\": \"123 Main St\",\n    \"city\": \"New York\",\n    \"district\": \"Manhattan\",\n    \"postalCode\": \"10001\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/driver/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "markCargoAsPickedUp",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/driver/cargos/:cargoId/status/picked-up",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"cargos",
+								":cargoId",
+								"status",
+								"picked-up"
+							],
+							"variable": [
+								{
+									"key": "cargoId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "markCargoAsDelivered",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/driver/cargos/:cargoId/status/delivered",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"cargos",
+								":cargoId",
+								"status",
+								"delivered"
+							],
+							"variable": [
+								{
+									"key": "cargoId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "acceptOffer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/driver/offers/:cargoId/accept",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"offers",
+								":cargoId",
+								"accept"
+							],
+							"variable": [
+								{
+									"key": "cargoId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getOffers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/driver/offers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"offers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getDashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/driver/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"driver",
+								"dashboard"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "distributor-controller",
+			"item": [
+				{
+					"name": "getAllCargos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/distributor/cargos",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"distributor",
+								"cargos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "createCargo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"selfLocation\": {\n    \"latitude\": 41.0082,\n    \"longitude\": 28.9784,\n    \"address\": \"Sultanahmet Meydanı\",\n    \"city\": \"İstanbul\",\n    \"district\": \"Fatih\",\n    \"postalCode\": \"34122\"\n  },\n  \"targetLocation\": {\n    \"latitude\": 41.0255,\n    \"longitude\": 28.9744,\n    \"address\": \"Karaköy Güllüoğlu\",\n    \"city\": \"İstanbul\",\n    \"district\": \"Beyoğlu\",\n    \"postalCode\": \"34425\"\n  },\n  \"measure\": {\n    \"weight\": 5.5,\n    \"width\": 20,\n    \"height\": 15,\n    \"length\": 30,\n    \"size\": \"SMALL\"\n  },\n  \"phoneNumber\": \"5559876543\",\n  \"description\": \"Önemli evraklar\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/distributor/cargos",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"distributor",
+								"cargos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getCargoById",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/distributor/cargos/:cargoId",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"distributor",
+								"cargos",
+								":cargoId"
+							],
+							"variable": [
+								{
+									"key": "cargoId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "cancelCargo",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/distributor/cargos/:cargoId/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"distributor",
+								"cargos",
+								":cargoId",
+								"cancel"
+							],
+							"variable": [
+								{
+									"key": "cargoId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getDashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/distributor/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"distributor",
+								"dashboard"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "public-controller",
+			"item": [
+				{
+					"name": "trackCargo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/public/track/:token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"track",
+								":token"
+							],
+							"variable": [
+								{
+									"key": "token",
+									"value": "kargo_takip_tokeni"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addDeliveryNote",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"note\": \"Lütfen kapıdaki zile basın.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/public/track/:token/notes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"track",
+								":token",
+								"notes"
+							],
+							"variable": [
+								{
+									"key": "token",
+									"value": "kargo_takip_tokeni"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addReview",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 5,\n  \"comment\": \"Çok hızlı teslimat, teşekkürler!\",\n  \"reviewerType\": \"CUSTOMER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/public/review/:token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"review",
+								":token"
+							],
+							"variable": [
+								{
+									"key": "token",
+									"value": "kargo_takip_tokeni"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "internal-controller",
+			"item": [
+				{
+					"name": "getAvailableDrivers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/internal/drivers/available",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"internal",
+								"drivers",
+								"available"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

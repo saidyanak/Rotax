@@ -9,9 +9,7 @@ services:
       - ./src:/app/src
       - /app/target
       - ~/.m2:/root/.m2
-    environment:
-      - JWT_SECRET=kfN1Dw/4e58EeF+9eJYb8TxP9TDPDeeHKhktwvGuUrA=
-      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD:-}
+    env_file: .env
     networks:
       - webnet
     depends_on:

@@ -70,6 +70,7 @@ class GlobalExceptionHandlerTest extends BaseTest {
     @Test
     void handleValidationExceptions_ShouldReturnBadRequest() {
         // Arrange
+
         FieldError fieldError1 = new FieldError("object", "rating", "Rating must be between 1 and 5");
         FieldError fieldError2 = new FieldError("object", "comment", "Comment is required");
 
