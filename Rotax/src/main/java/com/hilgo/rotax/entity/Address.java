@@ -19,6 +19,12 @@ public class Address {
     private Long id;
 
     @Column
+    private String address;
+
+    @Column
+    private String district;
+
+    @Column
     private String city;
 
     @Column

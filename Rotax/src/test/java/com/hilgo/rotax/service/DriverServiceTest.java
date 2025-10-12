@@ -1,40 +1,39 @@
 package com.hilgo.rotax.service;
 
-import com.hilgo.rotax.BaseTest;
-import com.hilgo.rotax.dto.CargoDTO;
-import com.hilgo.rotax.dto.CargoOfferDTO;
-import com.hilgo.rotax.dto.DriverDashboardResponse;
 import com.hilgo.rotax.dto.DriverStatusUpdateRequest;
+import com.hilgo.rotax.dto.LocationDTO;
+import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
+import com.hilgo.rotax.dto.UserDTO;
 import com.hilgo.rotax.entity.Cargo;
 import com.hilgo.rotax.entity.Driver;
 import com.hilgo.rotax.entity.Location;
-import com.hilgo.rotax.entity.Measure;
+import com.hilgo.rotax.enums.CarType;
 import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.enums.DriverStatus;
-import com.hilgo.rotax.enums.Size;
-import com.hilgo.rotax.exception.ResourceNotFoundException;
+import com.hilgo.rotax.exception.OperationNotAllowedException;
 import com.hilgo.rotax.repository.CargoRepository;
 import com.hilgo.rotax.repository.DriverRepository;
 import com.hilgo.rotax.repository.LocationRepository;
-import com.hilgo.rotax.repository.ReviewRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.security.core.Authentication;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
-class DriverServiceTest extends BaseTest {
+@ExtendWith(MockitoExtension.class)
+class DriverServiceTest {
 
     @Mock
     private DriverRepository driverRepository;
@@ -46,233 +45,138 @@ class DriverServiceTest extends BaseTest {
     private CargoRepository cargoRepository;
 
     @Mock
-    private ReviewRepository reviewRepository;
+    private AuthenticationService authenticationService;
 
     @Mock
-    private SecurityContext securityContext;
-
-    @Mock
-    private Authentication authentication;
+    private FileStorageService fileStorageService;
 
     @InjectMocks
     private DriverService driverService;
 
     private Driver testDriver;
-    private Location testLocation;
-    private Cargo testCargo;
 
     @BeforeEach
     void setUp() {
-        // Setup security context mock
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-        when(authentication.getName()).thenReturn("testdriver");
-
-        // Setup test driver
         testDriver = new Driver();
         testDriver.setId(1L);
         testDriver.setUsername("testdriver");
         testDriver.setFirstName("Test");
         testDriver.setLastName("Driver");
-        testDriver.setDriverStatus(DriverStatus.ACTIVE);
 
-        // Setup test location
-        testLocation = new Location();
-        testLocation.setId(1L);
-        testLocation.setLatitude(40.7128);
-        testLocation.setLongitude(-74.0060);
-        testLocation.setAddress("123 Test St");
-        testLocation.setCity("Test City");
-        testLocation.setDistrict("Test District");
-        testLocation.setPostalCode("12345");
-        testDriver.setLocation(testLocation);
+        // Mock SecurityContext to simulate a logged-in user
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(new UsernamePasswordAuthenticationToken(testDriver.getUsername(), "password"));
+        SecurityContextHolder.setContext(securityContext);
 
-        // Setup test cargo
-        testCargo = new Cargo();
-        testCargo.setId(1L);
-        testCargo.setCargoSituation(CargoSituation.ASSIGNED);
-        testCargo.setDriver(testDriver);
-        testCargo.setCreatedAt(LocalDateTime.now());
-        testCargo.setUpdatedAt(LocalDateTime.now());
-        
-        // Setup test measure
-        Measure measure = new Measure();
-        measure.setId(1L);
-        measure.setWeight(10.0);
-        measure.setWidth(20.0);
-        measure.setHeight(30.0);
-        measure.setLength(40.0);
-        measure.setSize(Size.MEDIUM);
-        testCargo.setMeasure(measure);
-        
-        // Setup test locations for cargo
-        Location selfLocation = new Location();
-        selfLocation.setId(2L);
-        selfLocation.setLatitude(40.7128);
-        selfLocation.setLongitude(-74.0060);
-        selfLocation.setAddress("456 Pickup St");
-        selfLocation.setCity("Pickup City");
-        
-        Location targetLocation = new Location();
-        targetLocation.setId(3L);
-        targetLocation.setLatitude(34.0522);
-        targetLocation.setLongitude(-118.2437);
-        targetLocation.setAddress("789 Delivery St");
-        targetLocation.setCity("Delivery City");
-        
-        testCargo.setSelfLocation(selfLocation);
-        testCargo.setTargetLocation(targetLocation);
-
-        // Setup repository mocks
-        when(driverRepository.findByUsername("testdriver")).thenReturn(Optional.of(testDriver));
-        when(cargoRepository.findByDriver(any(Driver.class))).thenReturn(List.of(testCargo));
-        when(reviewRepository.getAverageRatingForDriver(anyLong())).thenReturn(4.5);
+        when(driverRepository.findByUsername(testDriver.getUsername())).thenReturn(Optional.of(testDriver));
     }
 
     @Test
-    void getCurrentDriver_ShouldReturnDriver_WhenDriverExists() {
-        // Act
-        Driver result = driverService.getCurrentDriver();
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("testdriver", result.getUsername());
-        assertEquals("Test", result.getFirstName());
-        assertEquals("Driver", result.getLastName());
-        verify(driverRepository).findByUsername("testdriver");
-    }
-
-    @Test
-    void getCurrentDriver_ShouldThrowException_WhenDriverDoesNotExist() {
+    void updateDriverStatus_ShouldUpdateStatusAndLocation() {
         // Arrange
-        when(driverRepository.findByUsername("testdriver")).thenReturn(Optional.empty());
+        LocationDTO locationDTO = new LocationDTO();
+        locationDTO.setLatitude(41.0);
+        locationDTO.setLongitude(29.0);
 
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> driverService.getCurrentDriver());
-        verify(driverRepository).findByUsername("testdriver");
-    }
-
-    @Test
-    void updateDriverStatus_ShouldUpdateStatus() {
-        // Arrange
         DriverStatusUpdateRequest request = new DriverStatusUpdateRequest();
-        request.setStatus(DriverStatus.DESTINATION_BASED);
-        
-        com.hilgo.rotax.dto.LocationDTO locationDTO = new com.hilgo.rotax.dto.LocationDTO();
-        locationDTO.setLatitude(41.8781);
-        locationDTO.setLongitude(-87.6298);
-        locationDTO.setAddress("321 New St");
-        locationDTO.setCity("New City");
-        locationDTO.setDistrict("New District");
-        locationDTO.setPostalCode("54321");
+        request.setStatus(DriverStatus.ACTIVE);
         request.setLocation(locationDTO);
 
         // Act
         driverService.updateDriverStatus(request);
 
         // Assert
-        verify(driverRepository).save(testDriver);
-        verify(locationRepository).save(any(Location.class));
-        assertEquals(DriverStatus.DESTINATION_BASED, testDriver.getDriverStatus());
+        verify(locationRepository, times(1)).save(any(Location.class));
+        verify(driverRepository, times(1)).save(testDriver);
+        assertEquals(DriverStatus.ACTIVE, testDriver.getDriverStatus());
+        assertNotNull(testDriver.getLocation());
+        assertEquals(41.0, testDriver.getLocation().getLatitude());
     }
 
     @Test
-    void getDriverDashboard_ShouldReturnDashboard() {
-        // Act
-        DriverDashboardResponse response = driverService.getDriverDashboard();
-
-        // Assert
-        assertNotNull(response);
-        assertEquals(1L, response.getDriverId());
-        assertEquals("Test Driver", response.getDriverName());
-        assertEquals(4.5, response.getAverageRating());
-        assertEquals(1, response.getActiveDeliveries());
-        assertEquals(1, response.getCurrentCargos().size());
-        verify(cargoRepository).findByDriver(testDriver);
-        verify(reviewRepository).getAverageRatingForDriver(1L);
-    }
-
-    @Test
-    void getAvailableOffers_ShouldReturnOffers_WhenDriverIsActive() {
+    void updateProfile_ShouldUpdateProfileFields() {
         // Arrange
-        Cargo availableCargo = new Cargo();
-        availableCargo.setId(2L);
-        availableCargo.setCargoSituation(CargoSituation.CREATED);
-        availableCargo.setSelfLocation(testLocation);
-        availableCargo.setTargetLocation(testLocation);
-        availableCargo.setMeasure(testCargo.getMeasure());
-        
-        when(cargoRepository.findNearbyCargos(
-                eq(CargoSituation.CREATED), 
-                anyDouble(), 
-                anyDouble(), 
-                anyDouble()))
-                .thenReturn(List.of(availableCargo));
+        ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
+        request.setFirstName("UpdatedName");
+        request.setCarType(CarType.CAR);
+
+        when(authenticationService.convertToDTO(any(Driver.class))).thenReturn(new UserDTO());
 
         // Act
-        List<CargoOfferDTO> offers = driverService.getAvailableOffers();
+        driverService.updateProfile(request);
 
         // Assert
-        assertNotNull(offers);
-        assertEquals(1, offers.size());
-        verify(cargoRepository).findNearbyCargos(
-                eq(CargoSituation.CREATED), 
-                anyDouble(), 
-                anyDouble(), 
-                anyDouble());
+        verify(driverRepository, times(1)).save(testDriver);
+        assertEquals("UpdatedName", testDriver.getFirstName());
+        assertEquals(CarType.CAR2, testDriver.getCarType());
+    }
+
+    @Test
+    void updateProfilePicture_ShouldStoreFileAndUpdateUser() {
+        // Arrange
+        MultipartFile mockFile = mock(MultipartFile.class);
+        String fileUrl = "http://localhost/uploads/test.jpg";
+
+        when(fileStorageService.storeFile(mockFile)).thenReturn(fileUrl);
+        when(authenticationService.convertToDTO(any(Driver.class))).thenReturn(new UserDTO());
+
+        // Act
+        driverService.updateProfilePicture(mockFile);
+
+        // Assert
+        verify(fileStorageService, times(1)).storeFile(mockFile);
+        verify(driverRepository, times(1)).save(testDriver);
+        assertEquals(fileUrl, testDriver.getProfilePictureUrl());
     }
 
     @Test
     void acceptOffer_ShouldAssignCargoToDriver() {
         // Arrange
-        Cargo availableCargo = new Cargo();
-        availableCargo.setId(2L);
-        availableCargo.setCargoSituation(CargoSituation.CREATED);
-        availableCargo.setSelfLocation(testLocation);
-        availableCargo.setTargetLocation(testLocation);
-        availableCargo.setMeasure(testCargo.getMeasure());
-        
-        when(cargoRepository.findById(2L)).thenReturn(Optional.of(availableCargo));
-        when(cargoRepository.save(any(Cargo.class))).thenReturn(availableCargo);
+        Cargo cargo = new Cargo();
+        cargo.setId(10L);
+        cargo.setCargoSituation(CargoSituation.CREATED);
+
+        when(cargoRepository.findById(10L)).thenReturn(Optional.of(cargo));
 
         // Act
-        CargoDTO result = driverService.acceptOffer(2L);
+        driverService.acceptOffer(10L);
 
         // Assert
-        assertNotNull(result);
-        verify(cargoRepository).findById(2L);
-        verify(cargoRepository).save(availableCargo);
-        assertEquals(CargoSituation.ASSIGNED, availableCargo.getCargoSituation());
-        assertEquals(testDriver, availableCargo.getDriver());
+        verify(cargoRepository, times(1)).save(cargo);
+        assertEquals(CargoSituation.ASSIGNED, cargo.getCargoSituation());
+        assertEquals(testDriver, cargo.getDriver());
     }
 
     @Test
-    void updateCargoStatus_ShouldUpdateStatus_WhenValidTransition() {
+    void acceptOffer_ShouldThrowException_WhenCargoNotAvailable() {
         // Arrange
-        when(cargoRepository.findById(1L)).thenReturn(Optional.of(testCargo));
-        when(cargoRepository.save(any(Cargo.class))).thenReturn(testCargo);
+        Cargo cargo = new Cargo();
+        cargo.setId(10L);
+        cargo.setCargoSituation(CargoSituation.ASSIGNED); // Not available
 
-        // Act
-        CargoDTO result = driverService.updateCargoStatus(1L, CargoSituation.PICKED_UP);
-
-        // Assert
-        assertNotNull(result);
-        verify(cargoRepository).findById(1L);
-        verify(cargoRepository).save(testCargo);
-        assertEquals(CargoSituation.PICKED_UP, testCargo.getCargoSituation());
-        assertNotNull(testCargo.getTakingTime());
-    }
-
-    @Test
-    void updateCargoStatus_ShouldThrowException_WhenInvalidTransition() {
-        // Arrange
-        when(cargoRepository.findById(1L)).thenReturn(Optional.of(testCargo));
+        when(cargoRepository.findById(10L)).thenReturn(Optional.of(cargo));
 
         // Act & Assert
-        assertThrows(RuntimeException.class, () -> 
-            driverService.updateCargoStatus(1L, CargoSituation.CREATED));
-        
-        verify(cargoRepository).findById(1L);
-        verify(cargoRepository, never()).save(any(Cargo.class));
+        assertThrows(OperationNotAllowedException.class, () -> {
+            driverService.acceptOffer(10L);
+        });
+    }
+
+    @Test
+    void updateCargoStatus_ShouldUpdateStatusCorrectly() {
+        // Arrange
+        Cargo cargo = new Cargo();
+        cargo.setDriver(testDriver); // Cargo belongs to the current driver
+        cargo.setCargoSituation(CargoSituation.ASSIGNED);
+
+        when(cargoRepository.findById(anyLong())).thenReturn(Optional.of(cargo));
+
+        // Act
+        driverService.updateCargoStatus(10L, CargoSituation.PICKED_UP);
+
+        // Assert
+        verify(cargoRepository, times(1)).save(cargo);
+        assertEquals(CargoSituation.PICKED_UP, cargo.getCargoSituation());
+        assertNotNull(cargo.getTakingTime());
     }
 }

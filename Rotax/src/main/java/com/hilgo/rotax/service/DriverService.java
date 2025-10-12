@@ -1,34 +1,51 @@
 package com.hilgo.rotax.service;
 
-import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.entity.Cargo;
-import com.hilgo.rotax.entity.Driver;
-import com.hilgo.rotax.entity.Location;
-import com.hilgo.rotax.enums.CargoSituation;
-import com.hilgo.rotax.enums.DriverStatus;
-import com.hilgo.rotax.repository.CargoRepository;
-import com.hilgo.rotax.repository.DriverRepository;
-import com.hilgo.rotax.repository.LocationRepository;
-import com.hilgo.rotax.repository.ReviewRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.hilgo.rotax.dto.CargoDTO;
+import com.hilgo.rotax.dto.CargoOfferDTO;
+import com.hilgo.rotax.dto.DriverDashboardResponse;
+import com.hilgo.rotax.dto.DriverStatusUpdateRequest;
+import com.hilgo.rotax.dto.LocationDTO;
+import com.hilgo.rotax.dto.MeasureDTO;
+import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
+import com.hilgo.rotax.dto.UserDTO;
+import com.hilgo.rotax.entity.Cargo;
+import com.hilgo.rotax.entity.Driver;
+import com.hilgo.rotax.entity.Location;
+import com.hilgo.rotax.enums.CargoSituation;
+import com.hilgo.rotax.enums.DriverStatus;
+import com.hilgo.rotax.exception.OperationNotAllowedException;
+import com.hilgo.rotax.exception.UserNotActiveException;
+import com.hilgo.rotax.exception.ResourceNotFoundException;
+import com.hilgo.rotax.repository.CargoRepository;
+import com.hilgo.rotax.repository.DriverRepository;
+import com.hilgo.rotax.repository.LocationRepository;
+import com.hilgo.rotax.repository.ReviewRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DriverService {
 
     private final DriverRepository driverRepository;
     private final LocationRepository locationRepository;
     private final CargoRepository cargoRepository;
     private final ReviewRepository reviewRepository;
+    private final AuthenticationService authenticationService;
+    private final FileStorageService fileStorageService;
 
     public Driver getCurrentDriver() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -61,6 +78,46 @@ public class DriverService {
         driver.setLocation(location);
         driverRepository.save(driver);
     }
+
+    @Transactional
+    public UserDTO updateProfile(ProfileUpdateRequestDTO request) {
+        Driver driver = getCurrentDriver();
+
+        // DTO'dan gelen ve null/boş olmayan alanları güncelle
+        if (request.getFirstName() != null && !request.getFirstName().isBlank()) {
+            driver.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null && !request.getLastName().isBlank()) {
+            driver.setLastName(request.getLastName());
+        }
+        if (request.getPhoneNumber() != null) {
+            driver.setPhoneNumber(request.getPhoneNumber());
+        }
+        // Sürücüye özel alan: Araç Tipi
+        if (request.getCarType() != null) {
+            driver.setCarType(request.getCarType());
+        }
+
+        Driver updatedDriver = driverRepository.save(driver);
+        log.info("Sürücü profili güncellendi: {}", updatedDriver.getUsername());
+
+        // Güncellenmiş kullanıcıyı standart bir DTO'ya çevirip döndür
+        return authenticationService.convertToDTO(updatedDriver);
+    }
+
+    @Transactional
+    public UserDTO updateProfilePicture(MultipartFile file) {
+        Driver driver = getCurrentDriver();
+
+        String fileUrl = fileStorageService.storeFile(file);
+        driver.setProfilePictureUrl(fileUrl);
+
+        Driver updatedDriver = driverRepository.save(driver);
+        log.info("Sürücü profil resmi güncellendi: {}", updatedDriver.getUsername());
+
+        return authenticationService.convertToDTO(updatedDriver);
+    }
+
 
     public DriverDashboardResponse getDriverDashboard() {
         Driver driver = getCurrentDriver();
@@ -100,6 +157,11 @@ public class DriverService {
     public List<CargoOfferDTO> getAvailableOffers() {
         Driver driver = getCurrentDriver();
         
+        // Kullanıcı aktif değilse teklifleri göremez
+        if (!driver.getEnabled()) {
+            throw new UserNotActiveException("Hesabınız henüz onaylanmamıştır. Kargo tekliflerini göremezsiniz.");
+        }
+
         // Only active drivers can see offers
         if (driver.getDriverStatus() != DriverStatus.ACTIVE && 
             driver.getDriverStatus() != DriverStatus.DESTINATION_BASED) {
@@ -157,11 +219,11 @@ public class DriverService {
         Driver driver = getCurrentDriver();
         
         Cargo cargo = cargoRepository.findById(cargoId)
-                .orElseThrow(() -> new RuntimeException("Cargo not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cargo", "id", cargoId));
         
         // Check if cargo is available
         if (cargo.getCargoSituation() != CargoSituation.CREATED) {
-            throw new RuntimeException("Cargo is not available for acceptance");
+            throw new OperationNotAllowedException("Bu kargo artık kabul edilemez durumda.");
         }
         
         // Assign cargo to driver
@@ -177,11 +239,11 @@ public class DriverService {
         Driver driver = getCurrentDriver();
         
         Cargo cargo = cargoRepository.findById(cargoId)
-                .orElseThrow(() -> new RuntimeException("Cargo not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cargo", "id", cargoId));
         
         // Check if cargo belongs to driver
         if (!cargo.getDriver().getId().equals(driver.getId())) {
-            throw new RuntimeException("Cargo does not belong to this driver");
+            throw new OperationNotAllowedException("Bu kargo size ait değil.");
         }
         
         // Validate status transition
@@ -211,7 +273,7 @@ public class DriverService {
             return;
         }
         
-        throw new RuntimeException("Invalid status transition from " + currentStatus + " to " + newStatus);
+        throw new OperationNotAllowedException("Geçersiz durum geçişi: " + currentStatus + " -> " + newStatus);
     }
 
     private CargoDTO mapToCargoDTO(Cargo cargo) {

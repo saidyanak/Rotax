@@ -1,15 +1,9 @@
 
 package com.hilgo.rotax.service;
 
-import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.entity.*;
-import com.hilgo.rotax.enums.DriverStatus;
-import com.hilgo.rotax.repository.PasswordResetTokenRepository;
-import com.hilgo.rotax.repository.UserRepository;
-import jakarta.validation.constraints.Null;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.hibernate.engine.internal.Nullability;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,9 +11,30 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
+import com.hilgo.rotax.dto.AuthResponse;
+import com.hilgo.rotax.dto.ForgotPasswordRequest;
+import com.hilgo.rotax.dto.LoginRequest;
+import com.hilgo.rotax.dto.MessageResponse;
+import com.hilgo.rotax.dto.RegisterRequest;
+import com.hilgo.rotax.dto.ResetPasswordRequest;
+import com.hilgo.rotax.dto.UserDTO;
+import com.hilgo.rotax.dto.ValidateTokenRequest;
+import com.hilgo.rotax.dto.ValidateTokenResponse;
+import com.hilgo.rotax.entity.Distributor;
+import com.hilgo.rotax.entity.Driver;
+import com.hilgo.rotax.entity.PasswordResetToken;
+import com.hilgo.rotax.entity.User;
+import com.hilgo.rotax.entity.UserDocument;
+import com.hilgo.rotax.enums.DocumentType;
+import com.hilgo.rotax.enums.DriverStatus;
+import com.hilgo.rotax.repository.PasswordResetTokenRepository;
+import com.hilgo.rotax.repository.UserDocumentRepository;
+import com.hilgo.rotax.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +47,8 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
+    private final FileStorageService fileStorageService;
+    private final UserDocumentRepository userDocumentRepository;
 
     @Transactional(readOnly = true)
     public UserDTO getCurrentUser(String username) {
@@ -138,7 +155,7 @@ public class AuthenticationService {
                 .build();
     }
 
-    private UserDTO convertToDTO(User user) {
+    public UserDTO convertToDTO(User user) {
         return UserDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -149,11 +166,12 @@ public class AuthenticationService {
                 .role(user.getRole())
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
+                .profilePictureUrl(user.getProfilePictureUrl())
                 .build();
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request, MultipartFile[] documents) {
         log.info("Yeni kullanıcı kaydı başlatıldı: {} - Role: {}", request.getUsername(), request.getRoles());
 
         // Kullanıcı adı kontrolü
@@ -194,13 +212,31 @@ public class AuthenticationService {
         newUser.setLastName(request.getLastName());
         newUser.setPhoneNumber(request.getPhoneNumber());
         newUser.setRole(request.getRoles());
-        newUser.setEnabled(true); // E-posta onayı isteniyorsa 'false' ile başlayabilir
+        newUser.setEnabled(false); // Belgeler onaylanana kadar hesap pasif kalacak
         newUser.setAccountNonExpired(true);
         newUser.setAccountNonLocked(true);
         newUser.setCredentialsNonExpired(true);
 
         User savedUser = userRepository.save(newUser);
         log.info("Kullanıcı başarıyla kaydedildi: {}", savedUser.getUsername());
+
+        // Belgeleri işle (eğer varsa)
+        if (documents != null && documents.length > 0) {
+            log.info("{} adet belge yükleniyor...", documents.length);
+            for (MultipartFile docFile : documents) {
+                String fileUrl = fileStorageService.storeFile(docFile);
+                // Dosya adından belge tipini çıkarmaya çalışalım (örn: "ehliyet.pdf")
+                String originalFilename = docFile.getOriginalFilename().toUpperCase();
+                DocumentType docType = determineDocumentType(originalFilename);
+
+                UserDocument userDocument = UserDocument.builder()
+                        .user(savedUser)
+                        .documentType(docType)
+                        .fileUrl(fileUrl)
+                        .build();
+                userDocumentRepository.save(userDocument);
+            }
+        }
 
         // JWT token oluştur
         String jwtToken = jwtService.generateToken(savedUser);
@@ -218,6 +254,20 @@ public class AuthenticationService {
                 .lastName(savedUser.getLastName())
                 .role(savedUser.getRole())
                 .build();
+    }
+
+    private DocumentType determineDocumentType(String filename) {
+        if (filename == null) return DocumentType.IDENTITY_CARD; // Varsayılan
+        if (filename.contains("EHLIYET") || filename.contains("LICENSE")) {
+            return DocumentType.DRIVERS_LICENSE;
+        }
+        if (filename.contains("RUHSAT") || filename.contains("REGISTRATION")) {
+            return DocumentType.VEHICLE_REGISTRATION;
+        }
+        if (filename.contains("ADLI") || filename.contains("CRIMINAL")) {
+            return DocumentType.CRIMINAL_RECORD;
+        }
+        return DocumentType.IDENTITY_CARD;
     }
 
     @Transactional(readOnly = true)

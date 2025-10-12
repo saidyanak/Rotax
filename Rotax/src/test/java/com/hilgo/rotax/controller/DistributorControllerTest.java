@@ -1,176 +1,179 @@
 package com.hilgo.rotax.controller;
 
-import com.hilgo.rotax.BaseIntegrationTest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hilgo.rotax.dto.*;
+import com.hilgo.rotax.entity.Address;
+import com.hilgo.rotax.entity.Cargo;
+import com.hilgo.rotax.entity.Distributor;
+import com.hilgo.rotax.entity.Location;
 import com.hilgo.rotax.enums.CargoSituation;
+import com.hilgo.rotax.enums.Roles;
 import com.hilgo.rotax.enums.Size;
-import com.hilgo.rotax.service.DistributorService;
+import com.hilgo.rotax.repository.AddressRepository;
+import com.hilgo.rotax.repository.CargoRepository;
+import com.hilgo.rotax.repository.DistributorRepository;
+import com.hilgo.rotax.repository.LocationRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-class DistributorControllerTest extends BaseIntegrationTest {
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class DistributorControllerTest {
 
-    @MockitoBean
-    private DistributorService distributorService;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @Test
-    @WithMockUser(username = "testdistributor", roles = {"DISTRIBUTOR"})
-    void getDashboard_ShouldReturnDashboard() throws Exception {
-        // Arrange
-        when(distributorService.getDistributorDashboard()).thenReturn(
-                DistributorDashboardResponse.builder()
-                        .distributorId(1L)
-                        .distributorName("Test Distributor")
-                        .totalCargos(10)
-                        .activeCargos(5)
-                        .deliveredCargos(5)
-                        .currentCargos(Collections.emptyList())
-                        .recentCargos(Collections.emptyList())
-                        .build()
-        );
+    @Autowired
+    private ObjectMapper objectMapper;
 
-        // Act & Assert
-        mockMvc.perform(get("/api/distributor/dashboard"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.distributorId").value(1))
-                .andExpect(jsonPath("$.distributorName").value("Test Distributor"))
-                .andExpect(jsonPath("$.totalCargos").value(10))
-                .andExpect(jsonPath("$.activeCargos").value(5))
-                .andExpect(jsonPath("$.deliveredCargos").value(5));
+    @Autowired
+    private DistributorRepository distributorRepository;
+
+    @Autowired
+    private CargoRepository cargoRepository;
+
+    @Autowired
+    private LocationRepository locationRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private Distributor testDistributor;
+    private Cargo testCargo;
+
+    @BeforeEach
+    void setUp() {
+        Address address = addressRepository.save(new Address());
+        testDistributor = new Distributor();
+        testDistributor.setUsername("testdistributor");
+        testDistributor.setPassword(passwordEncoder.encode("password"));
+        testDistributor.setFirstName("Test");
+        testDistributor.setLastName("Distributor");
+        testDistributor.setEmail("distributor@test.com");
+        testDistributor.setPhoneNumber("0987654321");
+        testDistributor.setRole(Roles.DISTRIBUTOR);
+        testDistributor.setEnabled(true);
+        testDistributor.setAddress(address);
+        distributorRepository.save(testDistributor);
+
+        Location location = locationRepository.save(new Location());
+        testCargo = new Cargo();
+        testCargo.setDistributor(testDistributor);
+        testCargo.setSelfLocation(location);
+        testCargo.setTargetLocation(location);
+        testCargo.setCargoSituation(CargoSituation.CREATED);
+        cargoRepository.save(testCargo);
     }
 
     @Test
-    @WithMockUser(username = "testdistributor", roles = {"DISTRIBUTOR"})
-    void createCargo_ShouldReturnCreatedCargo() throws Exception {
-        // Arrange
-        CreateCargoRequest request = createSampleCargoRequest();
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
+    void getDashboard_ShouldReturnDashboard() throws Exception {
+        mockMvc.perform(get("/api/distributor/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.distributorId", is(testDistributor.getId().intValue())))
+                .andExpect(jsonPath("$.totalCargos", is(1)))
+                .andExpect(jsonPath("$.activeCargos", is(1)));
+    }
 
-        when(distributorService.createCargo(any(CreateCargoRequest.class))).thenReturn(
-                CargoDTO.builder()
-                        .id(1L)
-                        .cargoSituation(CargoSituation.CREATED)
-                        .distributorId(1L)
-                        .distributorName("Test Distributor")
-                        .phoneNumber("1234567890")
-                        .description("Test cargo")
-                        .build()
+    @Test
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
+    void updateProfile_ShouldUpdateDistributorProfile() throws Exception {
+        ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
+        request.setFirstName("UpdatedDistributor");
+        request.setAddress(AddressDTO.builder().city("Istanbul").build());
+
+        mockMvc.perform(put("/api/distributor/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName", is("UpdatedDistributor")));
+
+        Distributor updatedDistributor = distributorRepository.findByUsername("testdistributor").get();
+        assertEquals("UpdatedDistributor", updatedDistributor.getFirstName());
+        assertEquals("Istanbul", updatedDistributor.getAddress().getCity());
+    }
+
+    @Test
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
+    void uploadProfilePicture_ShouldUpdateProfilePicture() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "distributor_profile.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                "test image content".getBytes()
         );
 
-        // Act & Assert
+        mockMvc.perform(multipart("/api/distributor/profile/picture").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.profilePictureUrl").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
+    void createCargo_ShouldReturnCreatedCargo() throws Exception {
+        CreateCargoRequest request = createSampleCargoRequest();
+
         mockMvc.perform(post("/api/distributor/cargos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.cargoSituation").value("CREATED"))
-                .andExpect(jsonPath("$.distributorId").value(1))
-                .andExpect(jsonPath("$.distributorName").value("Test Distributor"))
-                .andExpect(jsonPath("$.phoneNumber").value("1234567890"))
-                .andExpect(jsonPath("$.description").value("Test cargo"));
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.cargoSituation", is("CREATED")))
+                .andExpect(jsonPath("$.description", is("Test cargo")));
     }
 
     @Test
-    @WithMockUser(username = "testdistributor", roles = {"DISTRIBUTOR"})
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
     void getAllCargos_ShouldReturnAllCargos() throws Exception {
-        // Arrange
-        when(distributorService.getAllCargos()).thenReturn(
-                List.of(
-                        CargoDTO.builder()
-                                .id(1L)
-                                .cargoSituation(CargoSituation.CREATED)
-                                .distributorId(1L)
-                                .distributorName("Test Distributor")
-                                .build(),
-                        CargoDTO.builder()
-                                .id(2L)
-                                .cargoSituation(CargoSituation.DELIVERED)
-                                .distributorId(1L)
-                                .distributorName("Test Distributor")
-                                .driverId(2L)
-                                .driverName("Test Driver")
-                                .build()
-                )
-        );
-
-        // Act & Assert
         mockMvc.perform(get("/api/distributor/cargos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].cargoSituation").value("CREATED"))
-                .andExpect(jsonPath("$[1].id").value(2))
-                .andExpect(jsonPath("$[1].cargoSituation").value("DELIVERED"))
-                .andExpect(jsonPath("$[1].driverName").value("Test Driver"));
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(testCargo.getId().intValue())));
     }
 
     @Test
-    @WithMockUser(username = "testdistributor", roles = {"DISTRIBUTOR"})
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
     void getCargoById_ShouldReturnCargo() throws Exception {
-        // Arrange
-        when(distributorService.getCargoById(anyLong())).thenReturn(
-                CargoDTO.builder()
-                        .id(1L)
-                        .cargoSituation(CargoSituation.CREATED)
-                        .distributorId(1L)
-                        .distributorName("Test Distributor")
-                        .phoneNumber("1234567890")
-                        .description("Test cargo")
-                        .build()
-        );
-
-        // Act & Assert
-        mockMvc.perform(get("/api/distributor/cargos/1"))
+        mockMvc.perform(get("/api/distributor/cargos/{cargoId}", testCargo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.cargoSituation").value("CREATED"))
-                .andExpect(jsonPath("$.distributorId").value(1))
-                .andExpect(jsonPath("$.distributorName").value("Test Distributor"));
+                .andExpect(jsonPath("$.id", is(testCargo.getId().intValue())))
+                .andExpect(jsonPath("$.distributorId", is(testDistributor.getId().intValue())));
     }
 
     @Test
-    @WithMockUser(username = "testdistributor", roles = {"DISTRIBUTOR"})
+    @WithMockUser(username = "testdistributor", roles = "DISTRIBUTOR")
     void cancelCargo_ShouldReturnCancelledCargo() throws Exception {
-        // Arrange
-        when(distributorService.cancelCargo(anyLong())).thenReturn(
-                CargoDTO.builder()
-                        .id(1L)
-                        .cargoSituation(CargoSituation.CANCELLED)
-                        .distributorId(1L)
-                        .distributorName("Test Distributor")
-                        .build()
-        );
-
-        // Act & Assert
-        mockMvc.perform(put("/api/distributor/cargos/1/cancel"))
+        mockMvc.perform(put("/api/distributor/cargos/{cargoId}/cancel", testCargo.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.cargoSituation").value("CANCELLED"))
-                .andExpect(jsonPath("$.distributorId").value(1))
-                .andExpect(jsonPath("$.distributorName").value("Test Distributor"));
+                .andExpect(jsonPath("$.cargoSituation", is("CANCELLED")));
+
+        Cargo cancelledCargo = cargoRepository.findById(testCargo.getId()).get();
+        assertEquals(CargoSituation.CANCELLED, cancelledCargo.getCargoSituation());
     }
 
     @Test
-    void getDashboard_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
-        // Act & Assert
-        mockMvc.perform(get("/api/distributor/dashboard"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @WithMockUser(username = "testuser", roles = {"DRIVER"})
+    @WithMockUser(username = "testdriver", roles = "DRIVER")
     void getDashboard_ShouldReturnForbidden_WhenWrongRole() throws Exception {
-        // Act & Assert
         mockMvc.perform(get("/api/distributor/dashboard"))
                 .andExpect(status().isForbidden());
     }

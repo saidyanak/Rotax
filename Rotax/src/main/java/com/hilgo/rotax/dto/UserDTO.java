@@ -22,4 +22,5 @@ public class UserDTO {
     private Roles role;
     private Boolean enabled;
     private LocalDateTime createdAt;
+    private String profilePictureUrl;
 }

@@ -1,5 +1,7 @@
 package com.hilgo.rotax.config;
 
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,8 +20,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import lombok.RequiredArgsConstructor;
-
-import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -46,7 +46,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/driver/**").hasRole("DRIVER")
                         .requestMatchers("/api/distributor/**").hasRole("DISTRIBUTOR")
                         .requestMatchers("/api/pickup-point/**").hasRole("PICKUP_POINT")
-                        .requestMatchers("/api/internal/**").hasAuthority("INTERNAL_SERVICE")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/internal/**").hasRole("ADMIN")
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/register",
@@ -60,7 +61,8 @@ public class SecurityConfiguration {
                                 "/api/public/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/uploads/**" // Yüklenen dosyaların public erişimine izin ver
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -1,16 +1,33 @@
 package com.hilgo.rotax.controller;
 
-import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.entity.User;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.hilgo.rotax.dto.AuthResponse;
+import com.hilgo.rotax.dto.ForgotPasswordRequest;
+import com.hilgo.rotax.dto.LoginRequest;
+import com.hilgo.rotax.dto.MessageResponse;
+import com.hilgo.rotax.dto.RegisterRequest;
+import com.hilgo.rotax.dto.ResetPasswordRequest;
+import com.hilgo.rotax.dto.UserDTO;
+import com.hilgo.rotax.dto.ValidateTokenRequest;
+import com.hilgo.rotax.dto.ValidateTokenResponse;
 import com.hilgo.rotax.service.AuthenticationService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -20,10 +37,12 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
 
-    @PostMapping("/register")
-    @Operation(summary = "Yeni kullanıcı kaydı", description = "Driver, Distributor veya Pickup Point olarak kayıt olma")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authenticationService.register(request);
+    @PostMapping(value = "/register", consumes = "multipart/form-data")
+    @Operation(summary = "Yeni kullanıcı kaydı (Belgelerle)", description = "Driver veya Distributor olarak kayıt olma. Sürücüler için 'documents' alanına ehliyet, ruhsat gibi belgeler eklenmelidir.")
+    public ResponseEntity<AuthResponse> register(
+            @Valid @RequestPart("request") RegisterRequest request,
+            @RequestPart(value = "documents", required = false) MultipartFile[] documents) {
+        AuthResponse response = authenticationService.register(request, documents);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
