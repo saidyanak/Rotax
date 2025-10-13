@@ -93,7 +93,7 @@ public class PublicService {
         Review review = new Review();
         review.setRating(reviewDTO.getRating());
         review.setComment(reviewDTO.getComment());
-        review.setReviewerType(ReviewerType.CUSTOMER);
+        review.setReviewerType(ReviewerType.END_USER);
         review.setDriver(driver);
         review.setReviewerName("Recipient");
         

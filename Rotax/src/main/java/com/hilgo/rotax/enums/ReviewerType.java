@@ -1,6 +1,7 @@
 package com.hilgo.rotax.enums;
 
 public enum ReviewerType {
-    CUSTOMER,
-    DRIVER;
+    END_USER, // Son kullanıcı
+    DRIVER,
+    DISTRIBUTOR
 }

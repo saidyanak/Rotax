@@ -2,14 +2,12 @@ package com.hilgo.rotax.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hilgo.rotax.dto.*;
-import com.hilgo.rotax.entity.Address;
 import com.hilgo.rotax.entity.Cargo;
 import com.hilgo.rotax.entity.Distributor;
 import com.hilgo.rotax.entity.Location;
 import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.enums.Roles;
 import com.hilgo.rotax.enums.Size;
-import com.hilgo.rotax.repository.AddressRepository;
 import com.hilgo.rotax.repository.CargoRepository;
 import com.hilgo.rotax.repository.DistributorRepository;
 import com.hilgo.rotax.repository.LocationRepository;
@@ -53,9 +51,6 @@ class DistributorControllerTest {
     private LocationRepository locationRepository;
 
     @Autowired
-    private AddressRepository addressRepository;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Distributor testDistributor;
@@ -63,7 +58,7 @@ class DistributorControllerTest {
 
     @BeforeEach
     void setUp() {
-        Address address = addressRepository.save(new Address());
+        Location locationDist = locationRepository.save(new Location());
         testDistributor = new Distributor();
         testDistributor.setUsername("testdistributor");
         testDistributor.setPassword(passwordEncoder.encode("password"));
@@ -73,7 +68,7 @@ class DistributorControllerTest {
         testDistributor.setPhoneNumber("0987654321");
         testDistributor.setRole(Roles.DISTRIBUTOR);
         testDistributor.setEnabled(true);
-        testDistributor.setAddress(address);
+        testDistributor.setLocation(locationDist);
         distributorRepository.save(testDistributor);
 
         Location location = locationRepository.save(new Location());
@@ -100,7 +95,7 @@ class DistributorControllerTest {
     void updateProfile_ShouldUpdateDistributorProfile() throws Exception {
         ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
         request.setFirstName("UpdatedDistributor");
-        request.setAddress(AddressDTO.builder().city("Istanbul").build());
+        request.setLocationDTO(LocationDTO.builder().city("Istanbul").build());
 
         mockMvc.perform(put("/api/distributor/profile")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -110,7 +105,7 @@ class DistributorControllerTest {
 
         Distributor updatedDistributor = distributorRepository.findByUsername("testdistributor").get();
         assertEquals("UpdatedDistributor", updatedDistributor.getFirstName());
-        assertEquals("Istanbul", updatedDistributor.getAddress().getCity());
+        assertEquals("Istanbul", updatedDistributor.getLocation().getCity());
     }
 
     @Test

@@ -1,6 +1,10 @@
 package com.hilgo.rotax.enums;
 
 public enum CarType {
-    CAR,
-    CAR2,
+    SUV,
+    SEDAN,
+    HATCHBACK,
+    MINIVAN,
+    PICKUP,
+    MOTORCYCLE
 }
