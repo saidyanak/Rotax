@@ -23,5 +23,5 @@ public class ProfileUpdateRequestDTO {
     private CarType carType; // Sadece sürücüler için geçerli olacak
 
     // Sadece dağıtıcılar için geçerli olacak
-    private AddressDTO address;
+    private LocationDTO locationDTO;
 }

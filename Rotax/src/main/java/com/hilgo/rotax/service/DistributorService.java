@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.hilgo.rotax.dto.AddressDTO;
 import com.hilgo.rotax.dto.CargoDTO;
 import com.hilgo.rotax.dto.CreateCargoRequest;
 import com.hilgo.rotax.dto.DistributorDashboardResponse;
@@ -18,7 +17,6 @@ import com.hilgo.rotax.dto.LocationDTO;
 import com.hilgo.rotax.dto.MeasureDTO;
 import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
 import com.hilgo.rotax.dto.UserDTO;
-import com.hilgo.rotax.entity.Address;
 import com.hilgo.rotax.entity.Cargo;
 import com.hilgo.rotax.entity.Distributor;
 import com.hilgo.rotax.entity.Location;
@@ -154,20 +152,20 @@ public class DistributorService {
         }
 
         // Adres bilgilerini güncelle
-        if (request.getAddress() != null) {
-            AddressDTO addressDTO = request.getAddress();
-            Address address = distributor.getAddress();
-            if (address == null) {
-                address = new Address();
-                distributor.setAddress(address);
+        if (request.getLocationDTO() != null) {
+            LocationDTO locationDTO = request.getLocationDTO();
+            Location location = distributor.getLocation();
+            if (location == null) {
+                location = new Location();
+                distributor.setLocation(location);
             }
             // Adres alanlarını DTO'dan gelen verilerle güncelle
-            address.setAddress(addressDTO.getAddress());
-            address.setDistrict(addressDTO.getDistrict());
-            address.setCity(addressDTO.getCity());
-            address.setNeighbourhood(addressDTO.getNeighbourhood());
-            address.setStreet(addressDTO.getStreet());
-            address.setBuild(address.getBuild());
+            location.setLatitude(locationDTO.getLatitude());
+            location.setLongitude(locationDTO.getLongitude());
+            location.setAddress(locationDTO.getAddress());
+            location.setDistrict(locationDTO.getDistrict());
+            location.setCity(locationDTO.getCity());
+            location.setPostalCode(locationDTO.getPostalCode());
         }
 
         // Not: VKN gibi hassas veya değişmemesi gereken alanlar burada güncellenmez.

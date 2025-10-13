@@ -62,7 +62,7 @@ class InternalControllerTest extends BaseIntegrationTest {
         driver1.setTc("12345678901");
         driver1.setDriverStatus(DriverStatus.ACTIVE);
         driver1.setRole(Roles.DRIVER); // <-- BU SATIRI EKLE
-        driver1.setCarType(CarType.CAR);
+        driver1.setCarType(CarType.HATCHBACK);
         driver1.setLocation(location1);
 
         Driver driver2 = new Driver();
@@ -74,7 +74,7 @@ class InternalControllerTest extends BaseIntegrationTest {
         driver2.setTc("12345678902");
         driver2.setRole(Roles.DRIVER); // <-- BU SATIRI EKLE
         driver2.setDriverStatus(DriverStatus.ACTIVE);
-        driver2.setCarType(CarType.CAR2);
+        driver2.setCarType(CarType.MINIVAN);
         driver2.setLocation(location2);
 
         when(driverRepository.findAllByDriverStatus(DriverStatus.ACTIVE))
@@ -89,13 +89,13 @@ class InternalControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[0].firstName").value("John"))
                 .andExpect(jsonPath("$[0].lastName").value("Doe"))
                 .andExpect(jsonPath("$[0].driverStatus").value("ACTIVE"))
-                .andExpect(jsonPath("$[0].carType").value("CAR"))
+                .andExpect(jsonPath("$[0].carType").value("HATCHBACK"))
                 .andExpect(jsonPath("$[1].id").value(2))
                 .andExpect(jsonPath("$[1].username").value("driver2"))
                 .andExpect(jsonPath("$[1].firstName").value("Jane"))
                 .andExpect(jsonPath("$[1].lastName").value("Smith"))
                 .andExpect(jsonPath("$[1].driverStatus").value("ACTIVE"))
-                .andExpect(jsonPath("$[1].carType").value("CAR2"));
+                .andExpect(jsonPath("$[1].carType").value("MINIVAN"));
     }
 
     @Test

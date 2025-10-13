@@ -98,7 +98,7 @@ class DriverServiceTest {
         // Arrange
         ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
         request.setFirstName("UpdatedName");
-        request.setCarType(CarType.CAR);
+        request.setCarType(CarType.HATCHBACK);
 
         when(authenticationService.convertToDTO(any(Driver.class))).thenReturn(new UserDTO());
 
@@ -108,7 +108,7 @@ class DriverServiceTest {
         // Assert
         verify(driverRepository, times(1)).save(testDriver);
         assertEquals("UpdatedName", testDriver.getFirstName());
-        assertEquals(CarType.CAR2, testDriver.getCarType());
+        assertEquals(CarType.HATCHBACK, testDriver.getCarType());
     }
 
     @Test

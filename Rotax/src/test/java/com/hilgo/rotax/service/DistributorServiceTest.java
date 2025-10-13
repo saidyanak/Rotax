@@ -101,17 +101,17 @@ class DistributorServiceTest {
     void updateProfile_ShouldUpdateAddress_WhenAddressIsProvided() {
         // Arrange
         ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
-        AddressDTO addressDTO = new AddressDTO();
-        addressDTO.setCity("Ankara");
-        request.setAddress(addressDTO);
+        com.hilgo.rotax.dto.LocationDTO locationDTO = new LocationDTO();
+        locationDTO.setCity("Ankara");
+        request.setLocationDTO(locationDTO);
 
         // Act
         distributorService.updateProfile(request);
 
         // Assert
         verify(distributorRepository, times(1)).save(testDistributor);
-        assertNotNull(testDistributor.getAddress());
-        assertEquals("Ankara", testDistributor.getAddress().getCity());
+        assertNotNull(testDistributor.getLocation());
+        assertEquals("Ankara", testDistributor.getLocation().getCity());
     }
 
     @Test

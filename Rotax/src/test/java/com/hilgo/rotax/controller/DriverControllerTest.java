@@ -128,7 +128,7 @@ class DriverControllerTest {
     void updateProfile_ShouldUpdateDriverProfile() throws Exception {
         ProfileUpdateRequestDTO request = new ProfileUpdateRequestDTO();
         request.setFirstName("UpdatedName");
-        request.setCarType(CarType.CAR);
+        request.setCarType(CarType.HATCHBACK);
 
         mockMvc.perform(put("/api/driver/profile")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,7 +138,7 @@ class DriverControllerTest {
 
         Driver updatedDriver = driverRepository.findByUsername("testdriver").get();
         assertEquals("UpdatedName", updatedDriver.getFirstName());
-        assertEquals(CarType.CAR, updatedDriver.getCarType());
+        assertEquals(CarType.HATCHBACK, updatedDriver.getCarType());
     }
 
     @Test

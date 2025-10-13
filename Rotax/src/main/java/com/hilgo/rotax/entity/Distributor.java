@@ -25,7 +25,7 @@ public class Distributor extends User{
     private String vkn;
 
     @OneToOne
-    private Address address;
+    private Location location;
 
     @OneToMany(mappedBy = "distributor")
     private List<Cargo> cargo;
