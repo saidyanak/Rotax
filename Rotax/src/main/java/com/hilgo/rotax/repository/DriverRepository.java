@@ -20,4 +20,6 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
            "ST_DistanceSphere(ST_MakePoint(d.location.longitude, d.location.latitude), " +
            "ST_MakePoint(:longitude, :latitude)) <= :radiusInMeters")
     List<Driver> findNearbyDrivers(DriverStatus status, Double latitude, Double longitude, Double radiusInMeters);
+
+    boolean existsByTc(String tc);
 }

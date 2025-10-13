@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface DistributorRepository extends JpaRepository<Distributor, Long> {
     Optional<Distributor> findByUsername(String username);
+
+    boolean existsByVkn(String vkn);
 }

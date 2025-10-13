@@ -4,6 +4,8 @@ package com.hilgo.rotax.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import com.hilgo.rotax.enums.Roles;
+import com.hilgo.rotax.repository.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,9 +31,6 @@ import com.hilgo.rotax.entity.User;
 import com.hilgo.rotax.entity.UserDocument;
 import com.hilgo.rotax.enums.DocumentType;
 import com.hilgo.rotax.enums.DriverStatus;
-import com.hilgo.rotax.repository.PasswordResetTokenRepository;
-import com.hilgo.rotax.repository.UserDocumentRepository;
-import com.hilgo.rotax.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +46,8 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
+    private final DriverRepository driverRepository;
+    private final DistributorRepository distributorRepository;
     private final FileStorageService fileStorageService;
     private final UserDocumentRepository userDocumentRepository;
 
@@ -182,6 +183,18 @@ public class AuthenticationService {
         // Email kontrolü
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Bu email adresi zaten kullanılıyor");
+        }
+
+        // TC or VKN Kontrolu
+        if (request.getRoles() == Roles.DRIVER)
+        {
+            if (driverRepository.existsByTc(request.getTc()))
+                throw new IllegalArgumentException("Bu Tc kullanılıyor");
+        }
+        else if (request.getRoles() == Roles.DISTRIBUTOR)
+        {
+            if (distributorRepository.existsByVkn(request.getVkn()))
+                    throw new IllegalArgumentException("Bu VKN kullanılıyor");
         }
 
         User newUser;

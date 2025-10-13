@@ -5,6 +5,5 @@ public enum Roles {
     ADMIN,
     DRIVER,
     DISTRIBUTOR,
-    PICKUP_POINT;  // Gel-Al Noktası
-
+    PICKUP_POINT  // Gel-Al Noktası
 }
