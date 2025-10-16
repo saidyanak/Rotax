@@ -29,7 +29,7 @@ jobs:
     # Bu komut, 'docker-compose.ci.yml' dosyasını okuyacak
     # O da 'Rotax/Dockerfile.prod' dosyasını kullanarak imajı build edecek.
     - name: Start services with Docker Compose
-      run: docker-compose -f docker-compose.ci.yml up -d
+      run: docker compose -f docker-compose.ci.yml up -d
 
     # 4. Servislerin başlaması için bekle
     - name: Wait for services
