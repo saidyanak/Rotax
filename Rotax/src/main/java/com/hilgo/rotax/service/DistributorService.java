@@ -1,9 +1,14 @@
 package com.hilgo.rotax.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.hilgo.rotax.entity.*;
+import com.hilgo.rotax.repository.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,18 +22,10 @@ import com.hilgo.rotax.dto.LocationDTO;
 import com.hilgo.rotax.dto.MeasureDTO;
 import com.hilgo.rotax.dto.ProfileUpdateRequestDTO;
 import com.hilgo.rotax.dto.UserDTO;
-import com.hilgo.rotax.entity.Cargo;
-import com.hilgo.rotax.entity.Distributor;
-import com.hilgo.rotax.entity.Location;
-import com.hilgo.rotax.entity.Measure;
 import com.hilgo.rotax.enums.CargoSituation;
 import com.hilgo.rotax.exception.OperationNotAllowedException;
 import com.hilgo.rotax.exception.ResourceNotFoundException;
 import com.hilgo.rotax.exception.UserNotActiveException;
-import com.hilgo.rotax.repository.CargoRepository;
-import com.hilgo.rotax.repository.DistributorRepository;
-import com.hilgo.rotax.repository.LocationRepository;
-import com.hilgo.rotax.repository.MeasureRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +41,7 @@ public class DistributorService {
     private final MeasureRepository measureRepository;
     private final FileStorageService fileStorageService;
     private final AuthenticationService authenticationService;
+    private final UserRepository userRepository;
 
     public Distributor getCurrentDistributor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -190,14 +188,15 @@ public class DistributorService {
         return authenticationService.convertToDTO(updatedDistributor);
     }
 
-    public List<CargoDTO> getAllCargos() {
-        Distributor distributor = getCurrentDistributor();
-        
-        List<Cargo> cargos = cargoRepository.findByDistributor(distributor);
-        
-        return cargos.stream()
-                .map(this::mapToCargoDTO)
-                .collect(Collectors.toList());
+    public Page<CargoDTO> getAllCargos(Pageable pageable) {
+        String userName = SecurityContextHolder.getContext().getAuthentication().getName();
+        Optional<User> optUser = userRepository.findByUsername(userName);
+        if (optUser.isEmpty())
+            throw new ResourceNotFoundException("User", "username", userName);
+        Distributor distributor = distributorRepository.findByUsername(userName).get();
+        Page<Cargo> cargoPage = cargoRepository.findByDistributorId(distributor.getId(), pageable);
+        Page<CargoDTO> cargoDTOPage = cargoPage.map(this::mapToCargoDTO);
+        return cargoDTOPage;
     }
 
     public CargoDTO getCargoById(Long cargoId) {

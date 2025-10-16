@@ -4,6 +4,8 @@ import com.hilgo.rotax.entity.Cargo;
 import com.hilgo.rotax.entity.Distributor;
 import com.hilgo.rotax.entity.Driver;
 import com.hilgo.rotax.enums.CargoSituation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -29,4 +31,6 @@ public interface CargoRepository extends JpaRepository<Cargo, Long> {
            "ST_DistanceSphere(ST_MakePoint(c.selfLocation.longitude, c.selfLocation.latitude), " +
            "ST_MakePoint(:longitude, :latitude)) <= :radiusInMeters")
     List<Cargo> findNearbyCargos(CargoSituation situation, Double latitude, Double longitude, Double radiusInMeters);
+
+    Page<Cargo> findByDistributorId(Long id, Pageable pageable);
 }

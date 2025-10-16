@@ -1,7 +1,13 @@
 package com.hilgo.rotax.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -59,8 +65,24 @@ public class DistributorController {
 
     @GetMapping("/cargos")
     @Operation(summary = "Dağıtıcıya ait tüm kargoları listeler", description = "Giriş yapmış olan dağıtıcının gönderdiği tüm kargoların listesini döndürür.")
-    public ResponseEntity<List<CargoDTO>> getAllCargos() {
-        return ResponseEntity.ok(distributorService.getAllCargos());
+    public ResponseEntity<Map<String , Object>> getAllCargos(@RequestParam(defaultValue = "0") int page,
+                                                             @RequestParam(defaultValue = "10") int size,
+                                                             @RequestParam(defaultValue = "id") String sortBy) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+        Page<CargoDTO> cargoDTOS = distributorService.getAllCargos(pageable);
+        Map<String , Object> response = new HashMap<String,Object>();
+        response.put("content", cargoDTOS.getContent());
+        response.put("totalElements", cargoDTOS.getTotalElements());
+        response.put("totalPages", cargoDTOS.getTotalPages());
+        response.put("number", cargoDTOS.getNumber());
+        response.put("size", cargoDTOS.getSize());
+        response.put("currentPage", cargoDTOS.getNumber());
+        response.put("pageSize", cargoDTOS.getSize());
+        response.put("sort", cargoDTOS.getSort());
+        response.put("numberOfElements", cargoDTOS.getNumberOfElements());
+        response.put("first", cargoDTOS.isFirst());
+        response.put("last", cargoDTOS.isLast());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/cargos/{cargoId}")
