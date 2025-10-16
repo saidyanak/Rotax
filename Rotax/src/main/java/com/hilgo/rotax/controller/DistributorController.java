@@ -64,7 +64,7 @@ public class DistributorController {
     }
 
     @GetMapping("/cargos")
-    @Operation(summary = "Dağıtıcıya ait tüm kargoları listeler", description = "Giriş yapmış olan dağıtıcının gönderdiği tüm kargoların listesini döndürür.")
+    @Operation(summary = "Dağıtıcıya ait tüm kargoları listeler", description = "Giriş yapmış olan dağıtıcının gönderdiği tüm kargoların listesini döndürür. 'Page türünde'")
     public ResponseEntity<Map<String , Object>> getAllCargos(@RequestParam(defaultValue = "0") int page,
                                                              @RequestParam(defaultValue = "10") int size,
                                                              @RequestParam(defaultValue = "id") String sortBy) {
