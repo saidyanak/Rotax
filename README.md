@@ -135,14 +135,6 @@ Her servisin kendi detaylı dokümantasyonu bulunmaktadır:
 - **Matching Service**: http://localhost:8000
 - **Web Panel**: http://localhost:3000
 
-## 🤝 Katkıda Bulunma
-
-Katkılarınızı bekliyoruz! Lütfen bir özellik eklemeden veya hata düzeltmesi yapmadan önce bir issue açın.
-
-## 📄 Lisans
-
-Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
-
 ---
 
 **Not:** Her bir servisin bağımsız olarak çalıştırılabilmesi için yukarıdaki altyapı servislerinin (PostgreSQL ve RabbitMQ) aktif olması gerekmektedir.
