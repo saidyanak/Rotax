@@ -25,19 +25,26 @@ jobs:
         # .env-example dosyanızdaki TÜM DEĞİŞKENLERİ buraya ekleyin
         echo ".env file created"
 
-    # 3. CI'a özel docker-compose dosyası ile servisleri başlat
-    # Bu komut, 'docker-compose.ci.yml' dosyasını okuyacak
-    # O da 'Rotax/Dockerfile.prod' dosyasını kullanarak imajı build edecek.
+    # 3. SENİN İSTEDİĞİN ADIM: Docker Compose'u kur
+    # Senin yapıştırdığın bozuk YAML'ı düzelttim.
+    # Bu adım, 'docker compose' (boşluklu, V2) komutunu hazırlar.
+    - name: Docker Setup Compose
+      uses: docker/setup-compose-action@v1.2.0
+      # 'with:' bloğuna şimdilik gerek yok, varsayılanlar V2 için yeterli.
+
+    # 4. CI için olan docker-compose dosyası ile tüm servisleri başlat
+    # BİR ÜSTTEKİ ADIM V2 (boşluklu) komutunu hazırladığı için
+    # BURADA DA V2 (boşluklu) komutunu kullanıyoruz.
     - name: Start services with Docker Compose
       run: docker compose -f docker-compose.ci.yml up -d
 
-    # 4. Servislerin başlaması için bekle
+    # 5. Servislerin tam olarak başlaması için bekle
     - name: Wait for services
       run: |
         echo "Waiting for services to become healthy..."
         sleep 45
 
-    # 5. Uygulamanın çalışıp çalışmadığını kontrol et
+    # 6. Uygulamanın çalışıp çalışmadığını kontrol et
     - name: Check if application is running
       run: |
         curl -f http://localhost:8080/swagger-ui/index.html || exit 1
