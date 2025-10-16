@@ -1,22 +1,22 @@
-name: CI with Docker Compose
+# Sadece CI (Derleme ve Test) yapan pipeline
+name: CI Pipeline (Build and Test)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] 
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main" ] 
 
 jobs:
+  # Sadece CI (Test Etme) Aşaması
   build-and-test:
     runs-on: ubuntu-latest
-
+    
     steps:
-    # 1. Kodları indir
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. GitHub Secrets'tan .env dosyası oluştur
-    - name: Create .env file
+    - name: Create .env file for testing
       run: |
         echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
         echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
@@ -25,26 +25,22 @@ jobs:
         # .env-example dosyanızdaki TÜM DEĞİŞKENLERİ buraya ekleyin
         echo ".env file created"
 
-    # 3. SENİN İSTEDİĞİN ADIM: Docker Compose'u kur
-    # Senin yapıştırdığın bozuk YAML'ı düzelttim.
-    # Bu adım, 'docker compose' (boşluklu, V2) komutunu hazırlar.
     - name: Docker Setup Compose
       uses: docker/setup-compose-action@v1.2.0
-      # 'with:' bloğuna şimdilik gerek yok, varsayılanlar V2 için yeterli.
 
-    # 4. CI için olan docker-compose dosyası ile tüm servisleri başlat
-    # BİR ÜSTTEKİ ADIM V2 (boşluklu) komutunu hazırladığı için
-    # BURADA DA V2 (boşluklu) komutunu kullanıyoruz.
-    - name: Start services with Docker Compose
+    - name: Start services with Docker Compose (CI)
       run: docker compose -f docker-compose.ci.yml up -d
 
-    # 5. Servislerin tam olarak başlaması için bekle
     - name: Wait for services
       run: |
         echo "Waiting for services to become healthy..."
-        sleep 45
+        # Süreyi 75 saniyeye çıkardık
+        sleep 75
 
-    # 6. Uygulamanın çalışıp çalışmadığını kontrol et
+    # HATA AYIKLAMA ADIMI: Uygulama loglarını göster
+    - name: Show container logs (for debugging)
+      run: docker compose -f docker-compose.ci.yml logs auth
+
     - name: Check if application is running
       run: |
         curl -f http://localhost:8080/swagger-ui/index.html || exit 1
