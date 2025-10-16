@@ -1,0 +1,44 @@
+name: CI with Docker Compose
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Kodları indir
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. GitHub Secrets'tan .env dosyası oluştur
+    - name: Create .env file
+      run: |
+        echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+        echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+        echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+        echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+        # .env-example dosyanızdaki TÜM DEĞİŞKENLERİ buraya ekleyin
+        echo ".env file created"
+
+    # 3. CI'a özel docker-compose dosyası ile servisleri başlat
+    # Bu komut, 'docker-compose.ci.yml' dosyasını okuyacak
+    # O da 'Rotax/Dockerfile.prod' dosyasını kullanarak imajı build edecek.
+    - name: Start services with Docker Compose
+      run: docker-compose -f docker-compose.ci.yml up -d
+
+    # 4. Servislerin başlaması için bekle
+    - name: Wait for services
+      run: |
+        echo "Waiting for services to become healthy..."
+        sleep 45
+
+    # 5. Uygulamanın çalışıp çalışmadığını kontrol et
+    - name: Check if application is running
+      run: |
+        curl -f http://localhost:8080/swagger-ui/index.html || exit 1
+        echo "Application is running successfully!"
