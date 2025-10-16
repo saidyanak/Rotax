@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  auth:
+    build:
+      context: ./Rotax  # Dockerfile'ın olduğu klasör
+      dockerfile: Dockerfile.prod # <-- EN ÖNEMLİ KISIM!
+    ports:
+      - "8080:8080"
+    env_file: .env
+    networks:
+      - webnet
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: rotax_postgres_ci
+    env_file:
+      - ./.env
+    ports:
+      - "5432:5432"
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    driver: bridge
