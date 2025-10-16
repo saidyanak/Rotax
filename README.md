@@ -82,10 +82,10 @@ Her bir bileşenin detaylı kurulum ve çalıştırma talimatları için ilgili 
 
 | Bileşen | Klasör | Dokümantasyon |
 |---------|--------|---------------|
-| Backend API | `backend/` | [backend/README.md](./backend/README.md) |
+| Backend API | `Rotax/` | [backend/README.md](./Rotax/README.md) |
 | Eşleştirme Servisi | `matching-service/` | [matching-service/README.md](./matching-service/README.md) |
-| Mobil Uygulama | `frontend-mobile/` | [frontend-mobile/README.md](./frontend-mobile/README.md) |
-| Web Paneli | `frontend-web/` | [frontend-web/README.md](./frontend-web/README.md) |
+| Mobil Uygulama | `frontend-mobile/` | [frontend-mobile/README.md](./RotaxFront/rotax/README.md) |
+| Web Paneli | `frontend-web/` | [frontend-web/README.md](./RotaxFront/rotax/README.md) |
 
 ## 🛠️ Teknoloji Stack
 
