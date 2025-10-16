@@ -55,8 +55,8 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     @Operation(summary = "Mevcut kullanıcı bilgisi", description = "Login olan kullanıcının bilgilerini getirir")
-    public ResponseEntity<UserDTO> getCurrentUser(@RequestBody Authentication authentication) {
-        UserDTO user = authenticationService.getCurrentUser(authentication.getName());
+    public ResponseEntity<UserDTO> getCurrentUser() {
+        UserDTO user = authenticationService.getCurrentUser();
         return ResponseEntity.ok(user);
     }
 
