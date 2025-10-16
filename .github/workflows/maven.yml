@@ -1,14 +1,21 @@
-# Sadece CI (Derleme ve Test) yapan pipeline
-name: CI Pipeline (Build and Test)
+name: CI & CD Pipeline (AWS)
 
+# Pipeline ne zaman çalışacak?
 on:
   push:
-    branches: [ "main" ] 
+    branches: [ "main" ] # Sadece 'main' branch'ine push'landığında
   pull_request:
-    branches: [ "main" ] 
+    branches: [ "main" ] # veya 'main'e bir PR açıldığında
+
+# Tüm işlerin (jobs) kullanacağı genel değişkenler
+env:
+  ECR_REGISTRY: 116981803650.dkr.ecr.eu-north-1.amazonaws.com
+  ECR_REPOSITORY: rotax_backend
+  AWS_REGION: eu-north-1
 
 jobs:
-  # Sadece CI (Test Etme) Aşaması
+  # ------ AŞAMA 1: CI (Test Etme) ------
+  # Bu aşama, her push'ta ve her PR'da çalışır.
   build-and-test:
     runs-on: ubuntu-latest
     
@@ -16,7 +23,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 'build-and-test' işinin içindeki bu adımı güncelle
     - name: Create .env file for testing
       run: |
         echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
@@ -37,12 +43,8 @@ jobs:
       run: docker compose -f docker-compose.ci.yml up -d
 
     - name: Wait for services
-      run: |
-        echo "Waiting for services to become healthy..."
-        # Süreyi 75 saniyeye çıkardık
-        sleep 40
+      run: sleep 45
 
-    # HATA AYIKLAMA ADIMI: Uygulama loglarını göster
     - name: Show container logs (for debugging)
       run: docker compose -f docker-compose.ci.yml logs auth
 
@@ -50,3 +52,64 @@ jobs:
       run: |
         curl -f http://localhost:8080/swagger-ui/index.html || exit 1
         echo "Application is running successfully!"
+
+  # ------ AŞAMA 2: PUSH (Docker İmajını ECR'a Yükleme) ------
+  # Bu aşama, SADECE 'build-and-test' başarılı olursa VE 'main' branch'ine PUSH yapılırsa çalışır.
+  push-to-ecr:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest -f Rotax/Dockerfile.prod ./Rotax
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+
+  # ------ AŞAMA 3: DEPLOY (Sunucuya Kurma) ------
+  # Bu aşama, SADECE 'push-to-ecr' başarılı olursa çalışır.
+  deploy-to-ec2:
+    needs: push-to-ecr
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          # Sunucuda oluşturduğumuz klasöre git
+          cd rotax_app
+          
+          # Sunucunun ECR'da oturum açmasını sağla
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+          
+          # 'docker-compose.prod.yml' dosyasını kullanarak en yeni 'auth' imajını çek
+          docker compose -f docker-compose.prod.yml pull auth
+          
+          # Sadece 'auth' servisini yeniden başlat (DB'ye dokunmaz)
+          docker compose -f docker-compose.prod.yml up -d --no-deps auth
+          
+          # Sistemdeki eski, kullanılmayan imajları temizle
+          docker image prune -f
