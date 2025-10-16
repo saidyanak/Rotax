@@ -40,7 +40,7 @@ jobs:
       run: |
         echo "Waiting for services to become healthy..."
         # Süreyi 75 saniyeye çıkardık
-        sleep 75
+        sleep 40
 
     # HATA AYIKLAMA ADIMI: Uygulama loglarını göster
     - name: Show container logs (for debugging)
