@@ -9,6 +9,7 @@ import com.hilgo.rotax.repository.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,8 @@ public class AuthenticationService {
     private final UserDocumentRepository userDocumentRepository;
 
     @Transactional(readOnly = true)
-    public UserDTO getCurrentUser(String username) {
+    public UserDTO getCurrentUser() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + username));
 
