@@ -43,7 +43,15 @@ jobs:
       run: docker compose -f docker-compose.ci.yml up -d
 
     - name: Wait for services
-      run: sleep 45
+      run: |
+        for i in {1..10}; do
+          if docker compose -f docker-compose.ci.yml ps | grep -q "running"; then
+            echo "Services are up and running!"
+            break
+          fi
+          echo "Waiting for services to start..."
+          sleep 10
+        done
 
     - name: Show container logs (for debugging)
       run: docker compose -f docker-compose.ci.yml logs auth
@@ -80,7 +88,7 @@ jobs:
       env:
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest -f Rotax/Dockerfile.prod ./Rotax
+        docker build --platform linux/amd64 -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest -f Rotax/Dockerfile.prod ./Rotax
         docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
         docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
 
