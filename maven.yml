@@ -1,0 +1,30 @@
+# maven.yml
+
+# Previous configurations for steps 1 and 2
+
+# Step 1 configuration...
+# Step 2 configuration...
+
+# Step 3: Improve debugging and logging
+steps:
+  - name: SSH Command Verification
+    run: |
+      echo 'Running SSH command...'
+      ssh -v user@host 'command' || { echo 'SSH command failed!'; exit 1; }
+
+  - name: Docker-Compose Command Verification
+    run: |
+      echo 'Running docker-compose command...'
+      docker-compose up -d || { echo 'docker-compose command failed!'; exit 1; }
+
+  - name: Detailed Logging
+    run: |
+      echo 'Starting Step 3'
+      # Add more detailed logging here for Step 3
+
+  - name: Detailed Logging for Step 4
+    run: |
+      echo 'Starting Step 4'
+      # Add more detailed logging here for Step 4
+
+# Ensure all commands are wrapped to capture errors and log them appropriately
