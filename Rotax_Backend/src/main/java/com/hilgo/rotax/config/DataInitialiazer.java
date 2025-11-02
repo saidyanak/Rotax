@@ -40,8 +40,6 @@ public class DataInitialiazer implements CommandLineRunner {
 
                 userRepository.save(admin);
                 System.out.println("✅ Admin kullanıcı oluşturuldu: admin@rotax.com");
-                System.out.println("📧 Email: admin@rotax.com");
-                System.out.println("🔑 Şifre: admin123");
             } else {
                 System.out.println("ℹ️ Admin kullanıcı zaten mevcut");
             }
