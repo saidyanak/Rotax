@@ -28,10 +28,11 @@ services:
     networks:
       - webnet
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rotax && psql -U postgres -d rotax -c 'SELECT 1'"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
