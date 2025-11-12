@@ -1,6 +1,5 @@
 name: CI & CD Pipeline (AWS)
 
-# Pipeline ne zaman çalışacak?
 on:
   push:
     branches: [ "main" ] # Sadece 'main' branch'ine push'landığında
