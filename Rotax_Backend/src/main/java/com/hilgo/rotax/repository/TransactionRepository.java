@@ -63,4 +63,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     // Admin: Duruma göre işlemler
     Page<Transaction> findByStatusOrderByCreatedAtDesc(TransactionStatus status, Pageable pageable);
+    
+    // Admin: Bekleyen çekim talepleri
+    Page<Transaction> findByTransactionTypeAndStatus(TransactionType type, TransactionStatus status, Pageable pageable);
+    
+    // Admin: Toplam komisyon
+    @Query("SELECT COALESCE(SUM(t.fee), 0) FROM Transaction t WHERE t.transactionType = 'COMMISSION' AND t.status = 'COMPLETED'")
+    BigDecimal getTotalCommissions();
+    
+    // Admin: Bekleyen çekim toplamı (tüm sistem)
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.transactionType = 'WITHDRAWAL' AND t.status = 'PENDING'")
+    BigDecimal getTotalPendingWithdrawals();
 }

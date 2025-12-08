@@ -9,4 +9,9 @@ import com.hilgo.rotax.enums.VerificationStatus;
 
 public interface UserDocumentRepository extends JpaRepository<UserDocument, Long> {
     List<UserDocument> findByVerificationStatus(VerificationStatus status);
+    
+    // Admin queries
+    long countByVerificationStatus(VerificationStatus status);
+    
+    List<UserDocument> findByUserId(Long userId);
 }

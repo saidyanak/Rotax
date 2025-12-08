@@ -22,4 +22,7 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
     List<Driver> findNearbyDrivers(DriverStatus status, Double latitude, Double longitude, Double radiusInMeters);
 
     boolean existsByTc(String tc);
+    
+    // Admin queries
+    long countByDriverStatus(DriverStatus status);
 }

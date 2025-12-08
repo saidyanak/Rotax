@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rotax-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - API_URL=http://backend:8080
+    networks:
+      - rotax-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../Rotax_Backend
+      dockerfile: Dockerfile
+    container_name: rotax-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/rotax
+      - SPRING_DATASOURCE_USERNAME=rotax
+      - SPRING_DATASOURCE_PASSWORD=rotax123
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - JWT_SECRET=rotax-super-secret-jwt-key-2025-very-long-and-secure-key-for-production
+      - JWT_EXPIRATION=86400000
+      - FRONTEND_URL=http://localhost:3000
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=test@example.com
+      - SPRING_MAIL_PASSWORD=test123
+    networks:
+      - rotax-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: rotax-postgres
+    environment:
+      - POSTGRES_DB=rotax
+      - POSTGRES_USER=rotax
+      - POSTGRES_PASSWORD=rotax123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rotax-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rotax -d rotax"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rotax-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - rotax-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  rotax-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

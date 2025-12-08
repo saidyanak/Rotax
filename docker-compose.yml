@@ -1,0 +1,139 @@
+# Rotax Full Stack Docker Compose
+# Backend (Spring Boot) + Frontend (Flutter Web) + PostgreSQL + RabbitMQ
+# Hassas bilgiler .env dosyasından okunur
+
+services:
+  # ==========================================
+  # Flutter Web Frontend
+  # ==========================================
+  frontend:
+    build:
+      context: ./Rotax_Frontend
+      dockerfile: Dockerfile
+    container_name: rotax-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - rotax-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  # ==========================================
+  # Spring Boot Backend
+  # ==========================================
+  backend:
+    build:
+      context: ./Rotax_Backend
+      dockerfile: Dockerfile
+    container_name: rotax-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring Profile
+      - SPRING_PROFILES_ACTIVE=docker
+      # Database
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      # RabbitMQ
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASS}
+      # JWT
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      # App Config
+      - FRONTEND_URL=${FRONTEND_URL}
+      # Mail
+      - SPRING_MAIL_HOST=${MAIL_HOST}
+      - SPRING_MAIL_PORT=${MAIL_PORT}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
+    volumes:
+      - ./Rotax_Backend/uploads:/app/uploads
+    networks:
+      - rotax-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: rotax-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - rotax-postgres-data:/var/lib/postgresql/data
+    networks:
+      - rotax-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ==========================================
+  # RabbitMQ Message Broker
+  # ==========================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rotax-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP port
+      - "15672:15672"   # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+    volumes:
+      - rotax-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - rotax-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  rotax-postgres-data:
+    driver: local
+  rotax-rabbitmq-data:
+    driver: local
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  rotax-network:
+    driver: bridge

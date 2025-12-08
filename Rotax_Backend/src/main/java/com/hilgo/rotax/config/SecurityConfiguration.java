@@ -73,7 +73,7 @@ public class SecurityConfiguration {
                 .addFilterBefore(new ApiKeyAuthFilter(apiKeyValue, apiKeyHeader), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout
-                        .logoutUrl("/auth/logout")
+                        .logoutUrl("/api/auth/logout")
                         .addLogoutHandler(logoutHandler)
                         .logoutSuccessHandler((request, response, authentication) -> SecurityContextHolder.clearContext())
                 );

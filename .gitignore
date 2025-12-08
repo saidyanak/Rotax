@@ -1,0 +1,22 @@
+# Environment variables (hassas bilgiler)
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+build/
+target/
+dist/

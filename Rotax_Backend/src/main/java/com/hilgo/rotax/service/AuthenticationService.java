@@ -177,6 +177,14 @@ public class AuthenticationService {
     public AuthResponse register(RegisterRequest request, MultipartFile[] documents) {
         log.info("Yeni kullanıcı kaydı başlatıldı: {} - Role: {}", request.getUsername(), request.getRoles());
 
+        // Belge zorunluluğu kontrolü - Tüm kullanıcılar için zorunlu
+        if (documents == null || documents.length == 0) {
+            String message = request.getRoles() == Roles.DRIVER 
+                ? "Sürücü belgelerinizi yüklemeniz zorunludur (Ehliyet, Ruhsat)"
+                : "Kimlik belgenizi yüklemeniz zorunludur (Nüfus Cüzdanı, Ehliyet veya Pasaport)";
+            throw new IllegalArgumentException(message);
+        }
+
         // Kullanıcı adı kontrolü
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Bu kullanıcı adı zaten kullanılıyor");
@@ -273,14 +281,18 @@ public class AuthenticationService {
 
     private DocumentType determineDocumentType(String filename) {
         if (filename == null) return DocumentType.IDENTITY_CARD; // Varsayılan
-        if (filename.contains("EHLIYET") || filename.contains("LICENSE")) {
+        if (filename.contains("EHLIYET") || filename.contains("LICENSE") || filename.contains("DRIVING")) {
             return DocumentType.DRIVERS_LICENSE;
         }
-        if (filename.contains("RUHSAT") || filename.contains("REGISTRATION")) {
+        if (filename.contains("RUHSAT") || filename.contains("REGISTRATION") || filename.contains("VEHICLE")) {
             return DocumentType.VEHICLE_REGISTRATION;
         }
-        if (filename.contains("ADLI") || filename.contains("CRIMINAL")) {
+        if (filename.contains("ADLI") || filename.contains("CRIMINAL") || filename.contains("SABIKA")) {
             return DocumentType.CRIMINAL_RECORD;
+        }
+        if (filename.contains("KIMLIK") || filename.contains("NUFUS") || filename.contains("ID") || 
+            filename.contains("PASAPORT") || filename.contains("PASSPORT")) {
+            return DocumentType.IDENTITY_CARD;
         }
         return DocumentType.IDENTITY_CARD;
     }
@@ -291,6 +303,7 @@ public class AuthenticationService {
 
         // Kullanıcıyı bul (username veya email ile)
         User user = userRepository.findByUsername(request.getUsernameOrEmail())
+                .or(() -> userRepository.findByEmail(request.getUsernameOrEmail()))
                 .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı"));
 
         // Authentication işlemi

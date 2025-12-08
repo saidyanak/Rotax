@@ -8,8 +8,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +35,14 @@ public interface CargoRepository extends JpaRepository<Cargo, Long> {
     List<Cargo> findNearbyCargos(CargoSituation situation, Double latitude, Double longitude, Double radiusInMeters);
 
     Page<Cargo> findByDistributorId(Long id, Pageable pageable);
+    
+    // Admin queries
+    Page<Cargo> findByCargoSituation(CargoSituation situation, Pageable pageable);
+    
+    long countByCargoSituation(CargoSituation situation);
+    
+    long countByCargoSituationIn(List<CargoSituation> situations);
+    
+    @Query("SELECT COUNT(c) FROM Cargo c WHERE CAST(c.createdAt AS date) = :date")
+    long countByCreatedAtDate(@Param("date") LocalDate date);
 }

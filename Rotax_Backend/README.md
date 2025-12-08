@@ -210,6 +210,17 @@ API, kullanıcı rollerine ve erişim seviyelerine göre mantıksal gruplara ayr
 | PUT | `/api/driver/cargos/{cargoId}/status/picked-up` | Kargoyu teslim aldığını bildirir | DRIVER |
 | PUT | `/api/driver/cargos/{cargoId}/status/delivered` | Kargoyu teslim ettiğini bildirir | DRIVER |
 
+### 💰 Cüzdan/Ödeme Endpoint'leri (`/api/wallet`)
+
+| Metot | URL | Açıklama | Yetkilendirme |
+|-------|-----|----------|---------------|
+| GET | `/api/wallet` | Kullanıcının cüzdan bilgilerini getirir | Authenticated |
+| GET | `/api/wallet/summary` | Cüzdan özetini getirir (toplam gelir, gider vb.) | Authenticated |
+| POST | `/api/wallet/deposit` | Cüzdana bakiye yükler | Authenticated |
+| POST | `/api/wallet/withdraw` | Cüzdandan bakiye çeker | Authenticated |
+| GET | `/api/wallet/transactions` | İşlem geçmişini listeler (paginated) | Authenticated |
+| GET | `/api/wallet/calculate-price` | Kargo ücreti hesaplar (mesafe bazlı) | Authenticated |
+
 ### 🌐 Herkese Açık Endpoint'ler (`/api/public`)
 
 | Metot | URL | Açıklama | Yetkilendirme |
@@ -222,9 +233,20 @@ API, kullanıcı rollerine ve erişim seviyelerine göre mantıksal gruplara ayr
 
 | Metot | URL | Açıklama | Yetkilendirme |
 |-------|-----|----------|---------------|
+| GET | `/api/admin/dashboard` | Sistem geneli istatistikleri ve özet bilgileri | ADMIN |
+| GET | `/api/admin/users` | Tüm kullanıcıları listeler (paginated, role filtreli) | ADMIN |
+| GET | `/api/admin/users/{userId}` | Kullanıcı detayını getirir | ADMIN |
+| PUT | `/api/admin/users/{userId}/toggle-status` | Kullanıcıyı aktif/pasif yapar | ADMIN |
+| PUT | `/api/admin/users/{userId}/toggle-lock` | Kullanıcı kilidini değiştirir | ADMIN |
+| GET | `/api/admin/cargos` | Tüm kargoları listeler (paginated, status filtreli) | ADMIN |
+| GET | `/api/admin/cargos/{cargoId}` | Kargo detayını getirir | ADMIN |
+| PUT | `/api/admin/cargos/{cargoId}/cancel` | Kargoyu admin yetkisiyle iptal eder | ADMIN |
 | GET | `/api/admin/documents/pending` | Onay bekleyen belgeleri listeler | ADMIN |
 | POST | `/api/admin/documents/{documentId}/approve` | Belgeyi onaylar | ADMIN |
 | POST | `/api/admin/documents/{documentId}/reject` | Belgeyi reddeder | ADMIN |
+| GET | `/api/admin/withdrawals/pending` | Bekleyen çekim taleplerini listeler | ADMIN |
+| POST | `/api/admin/withdrawals/{transactionId}/approve` | Çekim talebini onaylar | ADMIN |
+| POST | `/api/admin/withdrawals/{transactionId}/reject` | Çekim talebini reddeder | ADMIN |
 
 ### 🔗 Servisler Arası Endpoint'ler (`/api/internal`)
 
