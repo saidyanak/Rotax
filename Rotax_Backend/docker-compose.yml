@@ -19,10 +19,13 @@ services:
     env_file: .env
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - RABBITMQ_HOST=rabbitmq
     networks:
       - rotax-network
     depends_on:
       db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
 
@@ -46,8 +49,32 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rotax_rabbitmq
+    ports:
+      - "5672:5672"     # AMQP port
+      - "15672:15672"   # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USERNAME:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rotax-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - rotax-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
   rotax-db-data:
+    driver: local
+  rotax-rabbitmq-data:
     driver: local
 
 networks:
