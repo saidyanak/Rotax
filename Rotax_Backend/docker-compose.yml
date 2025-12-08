@@ -1,23 +1,34 @@
 services:
-  auth:
-    build: .
+  # Spring Boot Backend Servisi
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rotax_backend
     ports:
       - "8080:8080"
     volumes:
+      # Hot reload için kaynak kodları mount et
       - ./src:/app/src
+      # Target klasörünü container'da tut
       - /app/target
+      # Maven cache'i host ile paylaş (hızlı build)
       - ~/.m2:/root/.m2
+      # Upload klasörü
       - ./uploads:/app/uploads
     env_file: .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
     networks:
-      - webnet
+      - rotax-network
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 
+  # PostgreSQL Veritabanı
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: rotax_postgres
     env_file:
       - ./.env
@@ -26,9 +37,9 @@ services:
     volumes:
       - rotax-db-data:/var/lib/postgresql/data
     networks:
-      - webnet
+      - rotax-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d rotax && psql -U postgres -d rotax -c 'SELECT 1'"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-rotax}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -37,7 +48,8 @@ services:
 
 volumes:
   rotax-db-data:
+    driver: local
 
 networks:
-  webnet:
+  rotax-network:
     driver: bridge

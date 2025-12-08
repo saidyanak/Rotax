@@ -1,12 +1,74 @@
-# Rotax - Gelişmiş Lojistik Platformu
+# 🚚 Rotax Backend - Gelişmiş Lojistik Platformu
 
-Dağıtıcıları, mobil sürücüleri ve son kullanıcıları modern ve verimli bir ekosistemde birleştiren mikroservis tabanlı bir lojistik çözümü.
+> Dağıtıcıları, mobil sürücüleri ve son kullanıcıları modern ve verimli bir ekosistemde birleştiren mikroservis tabanlı bir lojistik çözümü.
 
-## Proje Hakkında
+## 📖 Proje Hakkında
 
 Bu proje, geleneksel kargo ve lojistik süreçlerine teknolojik bir yaklaşım getirmeyi amaçlamaktadır. E-ticaret firmaları (Dağıtıcılar) için kargo gönderimini kolaylaştırırken, bireysel sürücüler için ek gelir fırsatları yaratır. Tüm süreç, son kullanıcının kargosunu canlı olarak takip edebildiği ve geri bildirimde bulunabildiği şeffaf bir yapı üzerine kurulmuştur.
 
 Proje, ölçeklenebilirlik ve bakım kolaylığı sağlamak amacıyla **Spring Boot** (ana iş mantığı) ve **Python** (akıllı eşleştirme) servisleri olmak üzere iki ana bileşenden oluşan bir mikroservis mimarisi kullanmaktadır.
+
+## 🚀 Hızlı Başlangıç (Docker ile)
+
+### Ön Gereksinimler
+- Docker ve Docker Compose
+- Git
+
+### 1. Projeyi Klonlayın
+```bash
+git clone https://github.com/saidyanak/Rotax.git
+cd Rotax/Rotax_Backend
+```
+
+### 2. Environment Dosyasını Oluşturun
+```bash
+cp .env-example .env
+```
+
+`.env` dosyasını açın ve aşağıdaki değerleri kendi bilgilerinizle doldurun:
+```bash
+# PostgreSQL
+POSTGRES_DB=rotax
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_secure_password
+
+# Database Connection
+DATABASE_URL=jdbc:postgresql://db:5432/rotax
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=your_secure_password
+
+# JWT Secret (min 256-bit key)
+JWT_SECRET=your_super_secret_jwt_key_min_32_characters
+
+# Gmail SMTP (Opsiyonel - mail gönderimi için)
+GMAIL_APP_PASSWORD=your_gmail_app_password
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+
+# Internal API Key
+INTERNAL_API_KEY=rotax-internal-api-key
+```
+
+### 3. Docker ile Çalıştırın
+```bash
+# Tüm servisleri başlat (backend + PostgreSQL)
+docker compose up -d
+
+# Logları takip et
+docker compose logs -f
+
+# Servisleri durdur
+docker compose down
+
+# Servisleri durdur ve verileri sil
+docker compose down -v
+```
+
+### 4. API'ye Erişin
+- **API Base URL:** http://localhost:8080
+- **Swagger UI:** http://localhost:8080/swagger-ui.html
+- **API Docs:** http://localhost:8080/v3/api-docs
 
 ## Özellikler
 
@@ -105,103 +167,132 @@ com.yourcompany.deliveryapp
 
 ## API Endpoint'leri
 
-API, kullanıcı rollerine ve erişim seviyelerine göre mantıksal gruplara ayrılmıştır. (Daha detaylı dokümantasyon için Swagger/OpenAPI kullanılabilir.)
+API, kullanıcı rollerine ve erişim seviyelerine göre mantıksal gruplara ayrılmıştır.
 
-### Kimlik Doğrulama (Authentication)
+> 📘 **Swagger UI:** Tüm endpoint'lerin detaylı dokümantasyonu için [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) adresini ziyaret edin.
+
+### 🔐 Kimlik Doğrulama (`/api/auth`)
 
 | Metot | URL | Açıklama |
 |-------|-----|----------|
-| POST | `/api/auth/register/{userType}` | Yeni Sürücü veya Dağıtıcı kaydı oluşturur |
+| POST | `/api/auth/register` | Yeni Sürücü veya Dağıtıcı kaydı oluşturur (multipart/form-data) |
 | POST | `/api/auth/login` | Kullanıcı girişi yapar ve JWT döndürür |
+| GET | `/api/auth/me` | Mevcut kullanıcı bilgilerini getirir |
+| POST | `/api/auth/logout` | Kullanıcı oturumunu sonlandırır |
+| POST | `/api/auth/forgot-password` | Şifre sıfırlama maili gönderir |
+| POST | `/api/auth/reset-password` | Token ile şifre sıfırlar |
+| POST | `/api/auth/change-password` | Mevcut şifreyi değiştirir |
+| POST | `/api/auth/validate-reset-token` | Şifre sıfırlama token'ını doğrular |
+| GET | `/api/auth/validate-reset-token/{token}` | URL ile token doğrulama |
 
-### Dağıtıcı (Distributor) Endpoint'leri
-
-| Metot | URL | Açıklama | Yetkilendirme |
-|-------|-----|----------|---------------|
-| POST | `/api/cargos` | Yeni bir kargo oluşturur | DISTRIBUTOR |
-| GET | `/api/distributors/dashboard` | Dağıtıcının dashboard verilerini getirir | DISTRIBUTOR |
-| GET | `/api/distributors/cargos` | Dağıtıcının tüm kargolarını listeler | DISTRIBUTOR |
-
-### Sürücü (Driver) Endpoint'leri
-
-| Metot | URL | Açıklama | Yetkilendirme |
-|-------|-----|----------|---------------|
-| PUT | `/api/drivers/status` | Sürücünün durumunu günceller (ACTIVE/INACTIVE) | DRIVER |
-| GET | `/api/drivers/dashboard` | Sürücünün dashboard verilerini getirir | DRIVER |
-| GET | `/api/drivers/offers` | Sürücüye gelen aktif kargo tekliflerini listeler | DRIVER |
-| POST | `/api/drivers/offers/{offerId}/accept` | Gelen kargo teklifini kabul eder | DRIVER |
-| PUT | `/api/cargos/{cargoId}/status/picked-up` | Kargoyu teslim aldığını bildirir | DRIVER |
-| PUT | `/api/cargos/{cargoId}/status/delivered` | Kargoyu teslim ettiğini bildirir | DRIVER |
-
-### Son Kullanıcı (Public) Endpoint'leri
+### 📦 Dağıtıcı Endpoint'leri (`/api/distributor`)
 
 | Metot | URL | Açıklama | Yetkilendirme |
 |-------|-----|----------|---------------|
-| GET | `/api/public/track/{token}` | Güvenli token ile kargonun anlık konumunu getirir | Herkese Açık |
-| POST | `/api/public/track/{token}/notes` | Son kullanıcının teslimat notu eklemesini sağlar | Herkese Açık |
-| POST | `/api/public/review/{token}` | Güvenli token ile sürücüye puan ve yorum yapılmasını sağlar | Herkese Açık |
+| GET | `/api/distributor/dashboard` | Dağıtıcının dashboard verilerini getirir | DISTRIBUTOR |
+| PUT | `/api/distributor/profile` | Profil bilgilerini günceller | DISTRIBUTOR |
+| POST | `/api/distributor/profile/picture` | Profil resmi yükler | DISTRIBUTOR |
+| POST | `/api/distributor/cargos` | Yeni bir kargo oluşturur | DISTRIBUTOR |
+| GET | `/api/distributor/cargos` | Dağıtıcının tüm kargolarını listeler (paginated) | DISTRIBUTOR |
+| GET | `/api/distributor/cargos/{cargoId}` | Belirtilen kargo detayını getirir | DISTRIBUTOR |
+| PUT | `/api/distributor/cargos/{cargoId}/cancel` | Kargoyu iptal eder | DISTRIBUTOR |
 
-### Servisler Arası (Internal) Endpoint'ler
+### 🚗 Sürücü Endpoint'leri (`/api/driver`)
 
 | Metot | URL | Açıklama | Yetkilendirme |
 |-------|-----|----------|---------------|
-| GET | `/api/internal/drivers/available` | Eşleştirme için uygun olan sürücüleri listeler | INTERNAL_SERVICE_KEY |
+| PUT | `/api/driver/status` | Sürücü durumunu ve konumunu günceller | DRIVER |
+| GET | `/api/driver/dashboard` | Sürücünün dashboard verilerini getirir | DRIVER |
+| PUT | `/api/driver/profile` | Profil bilgilerini günceller | DRIVER |
+| POST | `/api/driver/profile/picture` | Profil resmi yükler | DRIVER |
+| GET | `/api/driver/offers` | Sürücüye gelen aktif kargo tekliflerini listeler | DRIVER |
+| POST | `/api/driver/offers/{cargoId}/accept` | Kargo teklifini kabul eder | DRIVER |
+| PUT | `/api/driver/cargos/{cargoId}/status/picked-up` | Kargoyu teslim aldığını bildirir | DRIVER |
+| PUT | `/api/driver/cargos/{cargoId}/status/delivered` | Kargoyu teslim ettiğini bildirir | DRIVER |
+
+### 🌐 Herkese Açık Endpoint'ler (`/api/public`)
+
+| Metot | URL | Açıklama | Yetkilendirme |
+|-------|-----|----------|---------------|
+| GET | `/api/public/track/{trackingCode}` | Kargonun anlık konumunu ve durumunu getirir | Herkese Açık |
+| POST | `/api/public/track/{trackingCode}/note` | Teslimat notu ekler | Herkese Açık |
+| POST | `/api/public/track/{trackingCode}/review` | Sürücüye puan ve yorum ekler | Herkese Açık |
+
+### 🔧 Admin Endpoint'leri (`/api/admin`)
+
+| Metot | URL | Açıklama | Yetkilendirme |
+|-------|-----|----------|---------------|
+| GET | `/api/admin/documents/pending` | Onay bekleyen belgeleri listeler | ADMIN |
+| POST | `/api/admin/documents/{documentId}/approve` | Belgeyi onaylar | ADMIN |
+| POST | `/api/admin/documents/{documentId}/reject` | Belgeyi reddeder | ADMIN |
+
+### 🔗 Servisler Arası Endpoint'ler (`/api/internal`)
+
+| Metot | URL | Açıklama | Yetkilendirme |
+|-------|-----|----------|---------------|
+| GET | `/api/internal/drivers/available` | Uygun sürücüleri listeler | INTERNAL_API_KEY |
 
 ## Kurulum ve Başlatma
 
-Projeyi yerel makinenizde çalıştırmak için aşağıdaki adımları izleyin:
+> ⚡ **Hızlı Başlangıç için** README'nin başındaki "Hızlı Başlangıç (Docker ile)" bölümüne bakın.
 
-### Gereksinimler
+### Docker Olmadan Geliştirme
 
-- Java 17+
-- Maven veya Gradle
-- Python 3.10+
-- Docker ve Docker Compose
+Docker kullanmadan geliştirme yapmak isterseniz:
 
-### Adımlar
+#### Gereksinimler
+- Java 21+
+- Maven 3.9+
+- PostgreSQL 15+
+- (Opsiyonel) Python 3.10+ (Eşleştirme servisi için)
+
+#### Adımlar
 
 1. **Repository'yi Klonlayın:**
-
 ```bash
-git clone https://github.com/kullanici-adiniz/rotax.git
-cd rotax
+git clone https://github.com/saidyanak/Rotax.git
+cd Rotax/Rotax_Backend
 ```
 
-2. **Altyapıyı Başlatın (Veritabanı ve RabbitMQ):**
-
-Aşağıdaki komut, Docker kullanarak PostgreSQL ve RabbitMQ servislerini başlatacaktır.
-
-```bash
-docker-compose up -d
+2. **PostgreSQL Veritabanını Oluşturun:**
+```sql
+CREATE DATABASE rotax;
 ```
 
-3. **Backend (Spring Boot) Servisini Yapılandırın ve Çalıştırın:**
-
-- `src/main/resources/application.properties` dosyasını açın
-- Veritabanı, RabbitMQ ve JWT ayarlarınızı yapılandırın
-- Uygulamayı çalıştırın:
-
+3. **Environment Değişkenlerini Ayarlayın:**
 ```bash
-mvn spring-boot:run
+export DATABASE_URL=jdbc:postgresql://localhost:5432/rotax
+export DATABASE_USERNAME=postgres
+export DATABASE_PASSWORD=your_password
+export JWT_SECRET=your_super_secret_jwt_key_min_32_characters
 ```
 
-4. **Python Eşleştirme Servisini Yapılandırın ve Çalıştırın:**
-
-- Python servisi dizinine gidin
-- Gerekli kütüphaneleri yükleyin:
-
+4. **Uygulamayı Çalıştırın:**
 ```bash
-pip install -r requirements.txt
+./mvnw spring-boot:run
 ```
 
-- RabbitMQ bağlantı bilgilerini içeren ortam değişkenlerini (environment variables) ayarlayın
-- Servisi başlatın:
+### Docker Compose Komutları
 
 ```bash
-python main.py
-```
+# Servisleri başlat (backend + database)
+docker compose up -d
 
-Proje artık yerel makinenizde çalışıyor olmalı!
+# Logları izle
+docker compose logs -f auth
+
+# Sadece database'i başlat
+docker compose up -d db
+
+# Servisleri durdur
+docker compose down
+
+# Servisleri durdur + verileri sil
+docker compose down -v
+
+# Image'ı yeniden oluştur
+docker compose up -d --build
+```
 
 ## Lisans
 
