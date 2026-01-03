@@ -12,6 +12,8 @@ RUN chmod +x mvnw
 # Bağımlılıkları indir (cache layer)
 RUN ./mvnw dependency:go-offline -B || true
 
+
+
 # Kaynak kodları kopyala
 COPY src ./src
 
