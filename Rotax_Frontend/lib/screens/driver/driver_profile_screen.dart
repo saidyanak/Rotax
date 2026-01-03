@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/rotax_app_bar.dart';
 import '../../widgets/rotax_card.dart';
 import '../../widgets/rotax_button.dart';
+import 'driver_edit_profile_screen.dart';
 
 class DriverProfileScreen extends StatelessWidget {
   const DriverProfileScreen({super.key});
@@ -102,8 +103,17 @@ class DriverProfileScreen extends StatelessWidget {
                       context,
                       Icons.edit_outlined,
                       'Profili Düzenle',
-                      () {
-                        // TODO: Navigate to edit profile
+                      () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DriverEditProfileScreen(),
+                          ),
+                        );
+                        // Geri dönünce profili yenile
+                        if (context.mounted) {
+                          await context.read<AuthProvider>().loadUserInfo();
+                        }
                       },
                     ),
                     const Divider(height: 0),

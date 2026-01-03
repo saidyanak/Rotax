@@ -109,7 +109,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _status = AuthStatus.loading;
     notifyListeners();
-    
+
     try {
       await AuthService.logout();
     } finally {
@@ -118,7 +118,20 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
+  Future<void> loadUserInfo() async {
+    try {
+      final updatedUser = await AuthService.getCurrentUser();
+      if (updatedUser != null) {
+        _user = updatedUser;
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

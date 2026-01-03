@@ -1,5 +1,6 @@
 package com.hilgo.rotax.dto;
 
+import com.hilgo.rotax.enums.DriverStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,4 +20,9 @@ public class DriverDashboardResponse {
     private Integer activeDeliveries;
     private List<CargoDTO> currentCargos;
     private List<CargoDTO> recentCargos;
+    
+    // Sürücü durum bilgileri
+    private DriverStatus driverStatus;
+    private LocationDTO destination;
+    private Double maxDeviationKm;
 }

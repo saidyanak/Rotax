@@ -73,10 +73,45 @@ public class DriverService {
         location.setCity(request.getLocation().getCity());
         location.setDistrict(request.getLocation().getDistrict());
         location.setPostalCode(request.getLocation().getPostalCode());
+        location.setUpdatedAt(LocalDateTime.now());
         
         locationRepository.save(location);
         driver.setLocation(location);
+        
+        // DESTINATION_BASED modu için hedef lokasyonu kaydet
+        if (request.getStatus() == DriverStatus.DESTINATION_BASED && request.getDestination() != null) {
+            Location destination = driver.getDestination();
+            if (destination == null) {
+                destination = new Location();
+            }
+            
+            destination.setLatitude(request.getDestination().getLatitude());
+            destination.setLongitude(request.getDestination().getLongitude());
+            destination.setAddress(request.getDestination().getAddress());
+            destination.setCity(request.getDestination().getCity());
+            destination.setDistrict(request.getDestination().getDistrict());
+            destination.setPostalCode(request.getDestination().getPostalCode());
+            destination.setUpdatedAt(LocalDateTime.now());
+            
+            locationRepository.save(destination);
+            driver.setDestination(destination);
+            
+            // Maksimum sapma mesafesini ayarla
+            if (request.getMaxDeviationKm() != null && request.getMaxDeviationKm() > 0) {
+                driver.setMaxDeviationKm(request.getMaxDeviationKm());
+            }
+            
+            log.info("Sürücü {} hedef bazlı moda geçti. Hedef: {}, {}", 
+                    driver.getUsername(), 
+                    destination.getLatitude(), 
+                    destination.getLongitude());
+        } else if (request.getStatus() != DriverStatus.DESTINATION_BASED) {
+            // Aktif veya offline modda hedefi temizle
+            driver.setDestination(null);
+        }
+        
         driverRepository.save(driver);
+        log.info("Sürücü {} durumu güncellendi: {}", driver.getUsername(), request.getStatus());
     }
 
     @Transactional
@@ -141,6 +176,20 @@ public class DriverService {
             averageRating = 0.0;
         }
         
+        // Hedef lokasyon bilgisi
+        LocationDTO destinationDTO = null;
+        if (driver.getDestination() != null) {
+            Location dest = driver.getDestination();
+            destinationDTO = LocationDTO.builder()
+                    .latitude(dest.getLatitude())
+                    .longitude(dest.getLongitude())
+                    .address(dest.getAddress())
+                    .city(dest.getCity())
+                    .district(dest.getDistrict())
+                    .postalCode(dest.getPostalCode())
+                    .build();
+        }
+        
         return DriverDashboardResponse.builder()
                 .driverId(driver.getId())
                 .driverName(driver.getFirstName() + " " + driver.getLastName())
@@ -151,6 +200,9 @@ public class DriverService {
                 .activeDeliveries(activeCargos.size())
                 .currentCargos(activeCargos.stream().map(this::mapToCargoDTO).collect(Collectors.toList()))
                 .recentCargos(recentCargos.stream().map(this::mapToCargoDTO).collect(Collectors.toList()))
+                .driverStatus(driver.getDriverStatus())
+                .destination(destinationDTO)
+                .maxDeviationKm(driver.getMaxDeviationKm())
                 .build();
     }
 
@@ -174,12 +226,43 @@ public class DriverService {
             return new ArrayList<>();
         }
         
-        // Find nearby cargos (within 10km)
-        List<Cargo> nearbyCargos = cargoRepository.findNearbyCargos(
-                CargoSituation.CREATED, 
-                driverLocation.getLatitude(), 
-                driverLocation.getLongitude(), 
-                10000.0);
+        List<Cargo> nearbyCargos;
+        
+        if (driver.getDriverStatus() == DriverStatus.ACTIVE) {
+            // ACTIVE mod: 10km içindeki tüm kargoları getir
+            nearbyCargos = cargoRepository.findNearbyCargos(
+                    CargoSituation.CREATED, 
+                    driverLocation.getLatitude(), 
+                    driverLocation.getLongitude(), 
+                    10000.0);
+        } else {
+            // DESTINATION_BASED mod: Rota üzerindeki kargoları getir
+            Location destination = driver.getDestination();
+            if (destination == null) {
+                log.warn("Sürücü {} hedef bazlı modda ama hedef lokasyonu yok", driver.getUsername());
+                return new ArrayList<>();
+            }
+            
+            // Daha geniş bir alanda ara (rota üzerindeki kargoları bulmak için)
+            double maxSearchRadius = calculateDistance(
+                    driverLocation.getLatitude(), driverLocation.getLongitude(),
+                    destination.getLatitude(), destination.getLongitude()) + 10000; // +10km buffer
+            
+            nearbyCargos = cargoRepository.findNearbyCargos(
+                    CargoSituation.CREATED, 
+                    driverLocation.getLatitude(), 
+                    driverLocation.getLongitude(), 
+                    maxSearchRadius);
+            
+            // Rota üzerinde olmayan kargoları filtrele
+            double maxDeviation = driver.getMaxDeviationKm() != null ? driver.getMaxDeviationKm() * 1000 : 5000;
+            nearbyCargos = nearbyCargos.stream()
+                    .filter(cargo -> isCargoOnRoute(
+                            driverLocation, destination, 
+                            cargo.getSelfLocation(), cargo.getTargetLocation(),
+                            maxDeviation))
+                    .collect(Collectors.toList());
+        }
         
         return nearbyCargos.stream()
                 .map(cargo -> {
@@ -212,6 +295,92 @@ public class DriverService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Kargonun sürücünün rotası üzerinde olup olmadığını kontrol eder.
+     * Hem alım noktası hem de teslimat noktası rota üzerinde olmalı.
+     */
+    private boolean isCargoOnRoute(Location driverLocation, Location destination, 
+                                    Location cargoPickup, Location cargoDelivery, 
+                                    double maxDeviationMeters) {
+        // Sürücünün rotası: driverLocation -> destination
+        // Kargonun rotası: cargoPickup -> cargoDelivery
+        
+        // 1. Kargo alım noktası sürücünün rotasına yakın mı?
+        double pickupDeviation = pointToLineDistance(
+                driverLocation.getLatitude(), driverLocation.getLongitude(),
+                destination.getLatitude(), destination.getLongitude(),
+                cargoPickup.getLatitude(), cargoPickup.getLongitude());
+        
+        if (pickupDeviation > maxDeviationMeters) {
+            return false;
+        }
+        
+        // 2. Kargo teslimat noktası sürücünün rotasına yakın mı?
+        double deliveryDeviation = pointToLineDistance(
+                driverLocation.getLatitude(), driverLocation.getLongitude(),
+                destination.getLatitude(), destination.getLongitude(),
+                cargoDelivery.getLatitude(), cargoDelivery.getLongitude());
+        
+        if (deliveryDeviation > maxDeviationMeters) {
+            return false;
+        }
+        
+        // 3. Kargo alım noktası, sürücünün mevcut konumundan hedefe giderken yolun üzerinde mi?
+        // (geriye gitmesini önlemek için)
+        double driverToDestination = calculateDistance(
+                driverLocation.getLatitude(), driverLocation.getLongitude(),
+                destination.getLatitude(), destination.getLongitude());
+        
+        double driverToPickup = calculateDistance(
+                driverLocation.getLatitude(), driverLocation.getLongitude(),
+                cargoPickup.getLatitude(), cargoPickup.getLongitude());
+        
+        double pickupToDestination = calculateDistance(
+                cargoPickup.getLatitude(), cargoPickup.getLongitude(),
+                destination.getLatitude(), destination.getLongitude());
+        
+        // Alım noktası hedefe daha yakın olmalı (geriye gitmesin)
+        if (pickupToDestination > driverToDestination) {
+            return false;
+        }
+        
+        // 4. Teslimat noktası alım noktasından sonra olmalı
+        double deliveryToDestination = calculateDistance(
+                cargoDelivery.getLatitude(), cargoDelivery.getLongitude(),
+                destination.getLatitude(), destination.getLongitude());
+        
+        // Teslimat noktası, alım noktasından hedefe doğru olmalı
+        return deliveryToDestination <= pickupToDestination;
+    }
+    
+    /**
+     * Bir noktanın bir doğruya olan mesafesini hesaplar (metre cinsinden)
+     */
+    private double pointToLineDistance(double lineStartLat, double lineStartLng,
+                                        double lineEndLat, double lineEndLng,
+                                        double pointLat, double pointLng) {
+        // Doğru vektörü
+        double dx = lineEndLng - lineStartLng;
+        double dy = lineEndLat - lineStartLat;
+        
+        // Doğru uzunluğunun karesi
+        double lineLengthSq = dx * dx + dy * dy;
+        
+        if (lineLengthSq == 0) {
+            // Başlangıç ve bitiş aynı nokta
+            return calculateDistance(lineStartLat, lineStartLng, pointLat, pointLng);
+        }
+        
+        // Noktanın doğru üzerindeki projeksiyonu
+        double t = Math.max(0, Math.min(1, 
+                ((pointLng - lineStartLng) * dx + (pointLat - lineStartLat) * dy) / lineLengthSq));
+        
+        double projLng = lineStartLng + t * dx;
+        double projLat = lineStartLat + t * dy;
+        
+        return calculateDistance(projLat, projLng, pointLat, pointLng);
     }
 
     @Transactional

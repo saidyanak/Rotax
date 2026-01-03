@@ -18,4 +18,10 @@ public class DriverStatusUpdateRequest {
     
     @NotNull(message = "Location is required")
     private LocationDTO location;
+    
+    // DESTINATION_BASED modu için hedef lokasyon (opsiyonel)
+    private LocationDTO destination;
+    
+    // Rota üzerinde kabul edilecek maksimum sapma mesafesi (km) - varsayılan 5km
+    private Double maxDeviationKm;
 }
