@@ -1,0 +1,104 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:  # Manuel tetikleme için
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # Self-hosted runner kullan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update environment variables
+        run: |
+          cd ~/rotax-app
+          cat > .env << EOF
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
+          RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
+          MAIL_HOST=${{ secrets.MAIL_HOST }}
+          MAIL_PORT=${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          EOF
+
+      - name: Copy project files
+        run: |
+          rsync -av --exclude '.git' --exclude 'node_modules' --exclude '.env' \
+            ./ ~/rotax-app/
+
+      - name: Build and Deploy
+        run: |
+          cd ~/rotax-app
+
+          echo "========================================="
+          echo "🚀 Rotax Deployment Started"
+          echo "========================================="
+
+          # Stop containers
+          echo "🛑 Stopping services..."
+          docker compose down
+
+          # Rebuild images
+          echo "🔨 Building Docker images..."
+          docker compose build
+
+          # Start services
+          echo "▶️  Starting services..."
+          docker compose up -d
+
+          # Wait for services
+          echo "⏳ Waiting for services to start..."
+          sleep 15
+
+          # Check status
+          echo "📊 Service Status:"
+          docker compose ps
+
+          echo "========================================="
+          echo "✅ Deployment Completed!"
+          echo "========================================="
+
+      - name: Health Check
+        run: |
+          cd ~/rotax-app
+
+          echo "🏥 Health Checks:"
+
+          # Backend health check
+          if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Backend is healthy"
+          else
+              echo "❌ Backend health check failed"
+              exit 1
+          fi
+
+          # Frontend health check
+          if curl -f http://localhost:3000 > /dev/null 2>&1; then
+              echo "✅ Frontend is healthy"
+          else
+              echo "❌ Frontend health check failed"
+              exit 1
+          fi
+
+      - name: Show logs
+        if: always()
+        run: |
+          cd ~/rotax-app
+          echo "📝 Recent Logs:"
+          docker compose logs --tail=30
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "🧹 Cleaning up old images..."
+          docker image prune -f

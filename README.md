@@ -8,6 +8,22 @@ Rotax, geleneksel kargo ve lojistik süreçlerine teknolojik bir yaklaşım geti
 
 Bu repository, Rotax platformunun tüm bileşenlerini barındıran ana merkezdir. Mikroservis mimarisi prensiplerine göre tasarlanmış, her bir servisin kendi klasöründe organize edildiği modüler bir yapıya sahiptir.
 
+## 🚀 Server Deployment
+
+**IP adresi ile çalışır - Domain gerekmez**
+
+👉 **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Tam kurulum rehberi
+
+### Adımlar
+
+1. Google Cloud VM oluştur
+2. Docker + Nginx kur
+3. Projeyi klonla
+4. `docker compose up -d`
+5. ✅ `http://IP_ADRESI` adresinden eriş
+
+**Süre:** ~30 dakika
+
 ## 🏗️ Mimari Genel Bakış
 
 ```
