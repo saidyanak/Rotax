@@ -58,7 +58,7 @@ jobs:
 
           # Wait for services
           echo "⏳ Waiting for services to start..."
-          sleep 15
+          sleep 10
 
           # Check status
           echo "📊 Service Status:"
@@ -74,19 +74,29 @@ jobs:
 
           echo "🏥 Health Checks:"
 
-          # Backend health check
-          if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+          # Backend health check with retry
+          echo "Checking backend..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
               echo "✅ Backend is healthy"
-          else
-              echo "❌ Backend health check failed"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Backend health check failed after 30 attempts"
+              docker compose logs backend --tail=50
               exit 1
-          fi
+            fi
+            echo "  Attempt $i/30 - Backend not ready yet, waiting..."
+            sleep 2
+          done
 
           # Frontend health check
+          echo "Checking frontend..."
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
               echo "✅ Frontend is healthy"
           else
               echo "❌ Frontend health check failed"
+              docker compose logs frontend --tail=50
               exit 1
           fi
 
