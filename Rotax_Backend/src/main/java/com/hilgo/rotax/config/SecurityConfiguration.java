@@ -87,7 +87,7 @@ public class SecurityConfiguration {
 
         // Frontend URLs
         configuration.setAllowedOrigins(Arrays.asList(
-                "https://cargoson-frontendd.onrender.com",
+                "http://34.51.247.251",  // Production server
                 "http://localhost:3000",
                 "http://localhost:8080"
         ));
