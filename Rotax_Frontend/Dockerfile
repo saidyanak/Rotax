@@ -16,7 +16,10 @@ RUN flutter pub get
 COPY . .
 
 # Build for web
-RUN flutter build web --release --web-renderer html
+RUN flutter build web --release --web-renderer html && \
+    # Clean cache to save space
+    flutter clean && \
+    rm -rf /root/.pub-cache/hosted/pub.dartlang.org/*
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
