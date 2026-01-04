@@ -15,11 +15,8 @@ RUN flutter pub get
 # Copy source code
 COPY . .
 
-# Build for web
-RUN flutter build web --release --web-renderer html && \
-    # Clean cache to save space
-    flutter clean && \
-    rm -rf /root/.pub-cache/hosted/pub.dartlang.org/*
+# Build for web (sadece html renderer, daha küçük)
+RUN flutter build web --release --web-renderer html --no-source-maps --tree-shake-icons
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
