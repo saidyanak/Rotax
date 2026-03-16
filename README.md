@@ -2,8 +2,6 @@
 
 > Dağıtıcıları, mobil sürücüleri ve son kullanıcıları modern bir ekosistemde birleştiren mikroservis tabanlı lojistik çözümü.
 
-Link : [Test Link](http://34.51.247.251/)
-
 ## 📖 Proje Hakkında
 
 Rotax, geleneksel kargo ve lojistik süreçlerine teknolojik bir yaklaşım getiren, ölçeklenebilir ve modern bir platformdur. E-ticaret firmaları için kargo gönderimini kolaylaştırırken, bireysel sürücüler için ek gelir fırsatları yaratır ve son kullanıcılara şeffaf, canlı takip imkanı sunar.
